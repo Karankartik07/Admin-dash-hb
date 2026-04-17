@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ConsultantApiService } from '../consultant-api.service';
 
@@ -15,24 +15,29 @@ export class AccountsComponent implements OnInit {
     { label: "Home" },
     { label: "Accounts", active: true },
   ];
-  profileData:any;
+  profileData: any;
 
   constructor(
     private api: ConsultantApiService,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.fetchProfile();
+    setTimeout(() => {
+      this.fetchProfile();
+    });
   }
 
   fetchProfile() {
     this.spinner.show();
     this.api.getProfile().subscribe((res: any) => {
       this.spinner.hide();
-      this.profileData = res.data;
-      this.profileData.hbCommission = ((this.profileData.hbCommission / 100) * this.profileData.totalEarning);
-      
+      setTimeout(() => {
+        this.profileData = res.data;
+        this.profileData.hbCommission = ((this.profileData.hbCommission / 100) * this.profileData.totalEarning);
+        this.cdr.detectChanges();
+      });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide();
     });

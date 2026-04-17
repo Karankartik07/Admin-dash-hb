@@ -8,7 +8,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -23,8 +23,6 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -33,14 +31,12 @@ import { Observable } from 'rxjs';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
   ],
@@ -65,39 +61,59 @@ export class AbandonedCartComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private fb: FormBuilder,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [
-      { label: "Ecommerce" },
-      { label: "Carts", active: true },
-    ];
+    setTimeout(() => {
+        this.breadCrumbItems = [
+          { label: "Ecommerce" },
+          { label: "Carts", active: true },
+        ];
 
-    this.route.queryParams.subscribe((res: any) => {
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getAbandonedCartList();
+        this.route.queryParams.subscribe((res: any) => {
+          setTimeout(() => {
+            this.pageSize = res.limit ? parseInt(res.limit) : 10;
+            this.page = res.page ? parseInt(res.page) : 1;
+            this.getAbandonedCartList();
+          });
+        });
     });
   }
 
   getAbandonedCartList() {
     let params = { limit: this.pageSize, page: this.page };
     this.spinner.show();
-    this.apiService.getAbandonedCartList(params).subscribe((res: any) => {
-      this.spinner.hide();
-      const { success, data, total } = res;
-      if (success && data) {
-        this.count = total;
-        this.carts = data.map(cart => {
-          cart.fullName = cart.userId ? this.getFullName(cart.userId) : 'Guest User';
-          let qty = 0;
-          cart.products.forEach(el => qty += el.quantity);
-          cart.totalQty = qty;
-          return cart;
-        });
-      }
-    }, () => this.spinner.hide());
+    this.apiService.getAbandonedCartList(params).subscribe({
+        next: (res: any) => {
+            this.spinner.hide();
+            const { success, data, total } = res;
+            if (success && data) {
+                setTimeout(() => {
+                    this.count = total;
+                    this.carts = data.map(cart => {
+                        cart.fullName = cart.userId ? this.getFullName(cart.userId) : 'Guest User';
+                        let qty = 0;
+                        cart.products.forEach(el => qty += el.quantity);
+                        cart.totalQty = qty;
+                        return cart;
+                    });
+                    this.cdr.detectChanges();
+                });
+            } else {
+                setTimeout(() => {
+                    this.count = 0;
+                    this.carts = [];
+                    this.cdr.detectChanges();
+                });
+            }
+        },
+        error: (err: any) => {
+            this.spinner.hide();
+            console.error(err);
+        }
+    });
   }
 
   getFullName(data) {
@@ -127,5 +143,6 @@ export class AbandonedCartComponent implements OnInit {
     });
     this.service.sortColumn = column;
     this.service.sortDirection = direction;
+    this.cdr.detectChanges();
   }
 }

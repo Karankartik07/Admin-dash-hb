@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { CorporateService } from '../corporate.service';
@@ -26,14 +26,19 @@ export class WebinarTemplatesComponent implements OnInit {
     private router: Router,
     private corporateService: CorporateService,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((res: any) => {
-      console.log("res", res);
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getList();
+    setTimeout(() => {
+        this.route.queryParams.subscribe((res: any) => {
+          setTimeout(() => {
+              console.log("res", res);
+              this.pageSize = res.limit ? parseInt(res.limit) : 10;
+              this.page = res.page ? parseInt(res.page) : 1;
+              this.getList();
+          });
+        });
     });
   }
 
@@ -45,8 +50,11 @@ export class WebinarTemplatesComponent implements OnInit {
     this.spinner.show();
     this.corporateService.getWebinarList(params).subscribe((res: any) => {
       this.spinner.hide();
-      this.total = res.count;
-      this.list = res.data;
+      setTimeout(() => {
+          this.total = res.count;
+          this.list = res.data;
+          this.cdr.detectChanges();
+      });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide();
     });

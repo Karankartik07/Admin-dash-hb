@@ -26,8 +26,6 @@ declare var bsCustomFileInput: any;
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -36,17 +34,14 @@ declare var bsCustomFileInput: any;
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-add-season',

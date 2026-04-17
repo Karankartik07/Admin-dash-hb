@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -22,8 +22,6 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -39,7 +37,6 @@ import { Observable } from 'rxjs';
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
     NgbdSortableHeader,
@@ -72,21 +69,23 @@ export class HealthConcernComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private router: Router,
     private route: ActivatedRoute,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private cdr: ChangeDetectorRef
   ) {
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Category', active: true }];
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Category', active: true }];
 
 
-    this.childId = this.route.snapshot.params.id;
-    if (this.childId) {
-      this.fetchHealthConcern();
-    } else {
-      this.getHealthConcern();
-    }
-
+        this.childId = this.route.snapshot.params.id;
+        if (this.childId) {
+          this.fetchHealthConcern();
+        } else {
+          this.getHealthConcern();
+        }
+    });
   }
 
   getHealthConcern() {
@@ -96,9 +95,12 @@ export class HealthConcernComponent implements OnInit {
       .subscribe({
         next: (res: any) => {
           this.spinner.hide();
-          if (res.data.healthConcerns) {
-            this.dataArray = res.data.healthConcerns;
-            this.count = res.data.count;
+          if (res.data && res.data.healthConcerns) {
+            setTimeout(() => {
+              this.dataArray = res.data.healthConcerns;
+              this.count = res.data.count;
+              this.cdr.detectChanges();
+            });
           }
         },
         error: (err: any) => {
@@ -115,7 +117,14 @@ export class HealthConcernComponent implements OnInit {
       .subscribe({
         next: (res: any) => {
           this.spinner.hide();
-          this.dataArray = res.data.children;
+          setTimeout(() => {
+            if (res.data && res.data.children) {
+                this.dataArray = res.data.children;
+            } else {
+                this.dataArray = [];
+            }
+            this.cdr.detectChanges();
+          });
         },
         error: (err: any) => {
           this.spinner.hide();
@@ -134,12 +143,15 @@ export class HealthConcernComponent implements OnInit {
     this.apiService.removeHealthConcern(id)
       .subscribe({
         next: (res: any) => {
-          this.toastr.success(res.message);
-          if (this.childId) {
-            this.fetchHealthConcern();
-          } else {
-            this.getHealthConcern();
-          }
+          setTimeout(() => {
+            this.toastr.success(res.message);
+            if (this.childId) {
+                this.fetchHealthConcern();
+            } else {
+                this.getHealthConcern();
+            }
+            this.cdr.detectChanges();
+          });
         },
         error: (err: any) => { }
       });
@@ -162,13 +174,22 @@ export class HealthConcernComponent implements OnInit {
         isTop: !data.isTop,
         _id: data._id
       };
-      this.apiService.toggleHealthConcernTop(body).subscribe(res => {
-        data.toggleTopLoading = false;
-        data.isTop = !data.isTop;
-        observer.next(true);
-      }, error => {
-        data.toggleTopLoading = false;
-        observer.next(false);
+      this.apiService.toggleHealthConcernTop(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleTopLoading = false;
+                data.isTop = !data.isTop;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleTopLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
 
@@ -181,13 +202,22 @@ export class HealthConcernComponent implements OnInit {
         isFeatured: !data.isFeatured,
         _id: data._id
       };
-      this.apiService.toggleHealthConcernFeatured(body).subscribe(res => {
-        data.toggleFeaturedLoading = false;
-        data.isFeatured = !data.isFeatured;
-        observer.next(true);
-      }, error => {
-        data.toggleFeaturedLoading = false;
-        observer.next(false);
+      this.apiService.toggleHealthConcernFeatured(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleFeaturedLoading = false;
+                data.isFeatured = !data.isFeatured;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleFeaturedLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
 
@@ -200,13 +230,22 @@ export class HealthConcernComponent implements OnInit {
         active: !data.active,
         _id: data._id
       };
-      this.apiService.updateHealthConcern(body).subscribe(res => {
-        data.toggleStatusLoading = false;
-        data.active = !data.active;
-        observer.next(true);
-      }, error => {
-        data.toggleStatusLoading = false;
-        observer.next(false);
+      this.apiService.updateHealthConcern(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleStatusLoading = false;
+                data.active = !data.active;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleStatusLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
   }
@@ -217,13 +256,22 @@ export class HealthConcernComponent implements OnInit {
         visibleAtHome: !data.visibleAtHome,
         _id: data._id
       };
-      this.apiService.updateHealthConcern(body).subscribe(res => {
-        data.toggleVisibleAtHome = false;
-        data.visibleAtHome = !data.visibleAtHome;
-        observer.next(true);
-      }, error => {
-        data.toggleVisibleAtHome = false;
-        observer.next(false);
+      this.apiService.updateHealthConcern(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleVisibleAtHome = false;
+                data.visibleAtHome = !data.visibleAtHome;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleVisibleAtHome = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
 
@@ -235,13 +283,22 @@ export class HealthConcernComponent implements OnInit {
         visibleAtLifeStyle: !data.visibleAtLifeStyle,
         _id: data._id
       };
-      this.apiService.updateHealthConcern(body).subscribe(res => {
-        data.toggleVisibleAtLifeStyle = false;
-        data.visibleAtLifeStyle = !data.visibleAtLifeStyle;
-        observer.next(true);
-      }, error => {
-        data.toggleVisibleAtLifeStyle = false;
-        observer.next(false);
+      this.apiService.updateHealthConcern(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleVisibleAtLifeStyle = false;
+                data.visibleAtLifeStyle = !data.visibleAtLifeStyle;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleVisibleAtLifeStyle = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
 
@@ -253,13 +310,22 @@ export class HealthConcernComponent implements OnInit {
         visibleAtConsultUs: !data.visibleAtConsultUs,
         _id: data._id
       };
-      this.apiService.updateHealthConcern(body).subscribe(res => {
-        data.toggleVisibleAtConsultUs = false;
-        data.visibleAtConsultUs = !data.visibleAtConsultUs;
-        observer.next(true);
-      }, error => {
-        data.toggleVisibleAtConsultUs = false;
-        observer.next(false);
+      this.apiService.updateHealthConcern(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleVisibleAtConsultUs = false;
+                data.visibleAtConsultUs = !data.visibleAtConsultUs;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleVisibleAtConsultUs = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
 

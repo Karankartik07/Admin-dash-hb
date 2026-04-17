@@ -1,6 +1,6 @@
 import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from "@angular/common/http";
-import { Component, OnInit, QueryList, ViewChildren } from "@angular/core";
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from "@angular/core";
 import { NgForm } from "@angular/forms";
 import { Router } from "@angular/router";
 import { NgbModal } from "@ng-bootstrap/ng-bootstrap";
@@ -42,12 +42,16 @@ export class BlogPoolComponent implements OnInit {
     private toaster: ToastrService,
     private router: Router,
     private spinner: NgxSpinnerService,
-    private modal: NgbModal
+    private modal: NgbModal,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.user = this.authService.currentUser()
-    this.getBlogList();
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Lifestyle' }, { label: 'Blog Pool', active: true }];
+      this.user = this.authService.currentUser()
+      this.getBlogList();
+    });
   }
 
   getBlogList() {
@@ -66,10 +70,13 @@ export class BlogPoolComponent implements OnInit {
 
     this.apiService
       .getBlogListV2(params).subscribe((res: any) => {
-        if (res.data) {
-          this.dataArray = res.data;
-          this.count = res.count;
-        }
+        setTimeout(() => {
+          if (res.data) {
+            this.dataArray = res.data;
+            this.count = res.count;
+            this.cdr.detectChanges();
+          }
+        });
       }, (err: any) => {
         console.log("err", err);
       })
@@ -82,11 +89,14 @@ export class BlogPoolComponent implements OnInit {
     }
     this.spinner.show()
     req.subscribe((res: any) => {
-      this.spinner.hide()
-      if (res.success) {
-        this.toaster.success('Blog added to list for review')
-        this.dataArray.splice(index, 1)
-      }
+      setTimeout(() => {
+        this.spinner.hide()
+        if (res.success) {
+          this.toaster.success('Blog added to list for review')
+          this.dataArray.splice(index, 1)
+          this.cdr.detectChanges();
+        }
+      });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()
 
@@ -120,17 +130,20 @@ export class BlogPoolComponent implements OnInit {
           : "";
       this.apiService.updateBlog(body).subscribe(
         (res) => {
-          type == "popular"
-            ? (data.togglePopularLoading = false)
-            : type == "status"
-              ? (data.toggleStatusLoading = false)
-              : "";
-          type == "popular"
-            ? (data.popular = !data.popular)
-            : type == "status"
-              ? (data.status = !data.status)
-              : "";
-          observer.next(true);
+          setTimeout(() => {
+            type == "popular"
+              ? (data.togglePopularLoading = false)
+              : type == "status"
+                ? (data.toggleStatusLoading = false)
+                : "";
+            type == "popular"
+              ? (data.popular = !data.popular)
+              : type == "status"
+                ? (data.status = !data.status)
+                : "";
+            this.cdr.detectChanges();
+            observer.next(true);
+          });
         },
         (error) => {
           type == "popular"
@@ -156,14 +169,18 @@ export class BlogPoolComponent implements OnInit {
 
     modal.result.then((result) => {
       if (result == 'yes') {
-        firstValueFrom(this.apiService.removeBlog(id))
-          .then((res: any) => {
-            this.toaster.success(res.message);
-            this.getBlogList();
-          })
-          .catch((err: any) => {
-            this.toaster.error(err.error);
-          });
+        this.apiService.removeBlog(id).subscribe({
+          next: (res: any) => {
+            setTimeout(() => {
+              this.toaster.success(res.message);
+              this.getBlogList();
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Failed to remove blog');
+          }
+        });
       }
     })
   }
@@ -179,11 +196,14 @@ export class BlogPoolComponent implements OnInit {
 
   // }
   onSearch(form: NgForm) {
-    this.search = form.value.searchTerm.trim();
+    this.search = (form.value.searchTerm || '').trim();
     this.page = 1;
     if (this.search) {
       this.apiService.algoliaSearch(this.search).subscribe((res: any) => {
-        this.dataArray = res.data;
+        setTimeout(() => {
+          this.dataArray = res.data;
+          this.cdr.detectChanges();
+        });
       });
     } else {
       this.getBlogList();

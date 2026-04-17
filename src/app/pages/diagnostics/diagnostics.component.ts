@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { NgForm, NgModel } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -38,10 +38,13 @@ export class DiagnosticsComponent implements OnInit {
     private diagnostics: DiagnosticsService,
     private api: DiagnosticsService,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.getList()
+    setTimeout(() => {
+        this.getList()
+    });
   }
 
   getList() {
@@ -59,24 +62,27 @@ export class DiagnosticsComponent implements OnInit {
     this.spinner.show()
     this.diagnostics.searchProducts(params).subscribe(res => {
       this.spinner.hide()
-      res.data.forEach(product => {
-        let childsGroup = {};
-        product.childs.forEach(el => {
-          let { groupName } = el;
-          childsGroup[groupName] = childsGroup[groupName] || [];
-          childsGroup[groupName].push(el)
-        })
-        product.childsGroup = Object.keys(childsGroup).map(key => {
-          return {
-            groupName: key,
-            childs: childsGroup[key]
-          }
-        })
-      })
+      setTimeout(() => {
+          res.data.forEach(product => {
+            let childsGroup = {};
+            product.childs.forEach(el => {
+              let { groupName } = el;
+              childsGroup[groupName] = childsGroup[groupName] || [];
+              childsGroup[groupName].push(el)
+            })
+            product.childsGroup = Object.keys(childsGroup).map(key => {
+              return {
+                groupName: key,
+                childs: childsGroup[key]
+              }
+            })
+          })
 
 
-      this.list = res.data;
-      this.total = res.total;
+          this.list = res.data;
+          this.total = res.total;
+          this.cdr.detectChanges();
+      });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()
     })
@@ -133,23 +139,29 @@ export class DiagnosticsComponent implements OnInit {
       }
 
       this.api.updateProduct(data._id, body).subscribe((res) => {
-        if (type == "isFeaturedOffer") {
-          data.isFeaturedOffer = !data.isFeaturedOffer;
-          data.toggleFeaturedOfferLoading = false;
-        }
-        else if (type == "isFeaturedProduct") {
-          data.isFeaturedProduct = !data.isFeaturedProduct;
-          data.toggleFeaturedProductoading = false
-        }
-        observer.next(true);
+        setTimeout(() => {
+            if (type == "isFeaturedOffer") {
+              data.isFeaturedOffer = !data.isFeaturedOffer;
+              data.toggleFeaturedOfferLoading = false;
+            }
+            else if (type == "isFeaturedProduct") {
+              data.isFeaturedProduct = !data.isFeaturedProduct;
+              data.toggleFeaturedProductoading = false
+            }
+            this.cdr.detectChanges();
+            observer.next(true);
+        });
       }, (err: HttpErrorResponse) => {
-        if (type == "isFeaturedOffer") {
-          data.toggleFeaturedOfferLoading = false;
-        }
-        else if (type == "isFeaturedProduct") {
-          data.toggleFeaturedProductoading = false
-        }
-        observer.next(false);
+        setTimeout(() => {
+            if (type == "isFeaturedOffer") {
+              data.toggleFeaturedOfferLoading = false;
+            }
+            else if (type == "isFeaturedProduct") {
+              data.toggleFeaturedProductoading = false
+            }
+            this.cdr.detectChanges();
+            observer.next(false);
+        });
       }
       );
 

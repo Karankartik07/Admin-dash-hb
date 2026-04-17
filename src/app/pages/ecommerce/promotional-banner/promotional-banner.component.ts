@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -19,13 +19,12 @@ import { AuthenticationService } from '../../../core/services/auth.service';
 import { LifestyleService } from '../../lifestyle/lifestyle.service';
 import { User } from '../../../core/models/auth.models';
 import { RequestHttpParams } from '../../../core/services/api.service';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -34,24 +33,21 @@ import { Observable, firstValueFrom } from 'rxjs';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   , HbSwitchComponent],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: "app-promotional-banner",
     templateUrl: "./promotional-banner.component.html",
     styleUrls: ['./promotional-banner.component.scss']
 })
-export class PromotionalBannerComponent {
+export class PromotionalBannerComponent implements OnInit {
     user: User;
     search: string = '';
     path: string;
@@ -68,15 +64,18 @@ export class PromotionalBannerComponent {
         private route: ActivatedRoute,
         private authService: AuthenticationService,
         private lifestyleService: LifestyleService,
+        private cdr: ChangeDetectorRef
     ) { }
 
     ngOnInit() {
-        let urlSegments = this.route.snapshot.url;
-        this.path = urlSegments[urlSegments.length - 1].path;
-        this.user = this.authService.currentUser()
+        setTimeout(() => {
+            let urlSegments = this.route.snapshot.url;
+            this.path = urlSegments[urlSegments.length - 1].path;
+            this.user = this.authService.currentUser()
 
-        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Promotional Banners', active: true }];
-        this.getPromotionalBannerList();
+            this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Promotional Banners', active: true }];
+            this.getPromotionalBannerList();
+        });
     }
 
     getPromotionalBannerList() {
@@ -86,14 +85,19 @@ export class PromotionalBannerComponent {
             page: this.page
         };
 
-        this.apiService.getPromotionalBannerList(params).subscribe((res: any) => {
-            if (res.data.banners) {
-                this.dataArray = res.data.banners;
-                console.log('this.dataArray = ', this.dataArray);
-                this.count = res.data.count;
+        this.apiService.getPromotionalBannerList(params).subscribe({
+            next: (res: any) => {
+                if (res.data && res.data.banners) {
+                    setTimeout(() => {
+                        this.dataArray = res.data.banners;
+                        this.count = res.data.count;
+                        this.cdr.detectChanges();
+                    });
+                }
+            },
+            error: (err: any) => {
+                console.error(err);
             }
-        }, (err: any) => {
-            console.log("err", err);
         });
 
     }
@@ -105,16 +109,23 @@ export class PromotionalBannerComponent {
                 active: !data.active,
                 _id: data._id
             }
-            firstValueFrom(this.apiService.updatePromotionalBanner(body))
-                .then((res: any) => {
-                    data.toggleActiveLoading = false;
-                    data.active = !data.active;
-                    observer.next(true)
-                })
-                .catch((err: any) => {
-                    data.toggleActiveLoading = false;
-                    observer.next(false);
-                });
+            this.apiService.updatePromotionalBanner(body).subscribe({
+                next: (res: any) => {
+                    setTimeout(() => {
+                        data.toggleActiveLoading = false;
+                        data.active = !data.active;
+                        this.cdr.detectChanges();
+                        observer.next(true);
+                    });
+                },
+                error: (err: any) => {
+                    setTimeout(() => {
+                        data.toggleActiveLoading = false;
+                        this.cdr.detectChanges();
+                        observer.next(false);
+                    });
+                }
+            });
         })
     }
 
@@ -127,15 +138,18 @@ export class PromotionalBannerComponent {
 
     removePromotionalBanner(data) {
 
-        if (confirm('Are you sure you want to delete "' + data.type + '"promotional banner?')) {
-            this.spinner.show()
+        if (confirm('Are you sure you want to delete "' + data.type + '" promotional banner?')) {
+            this.spinner.show();
             this.apiService.removePromotionalBanner(data._id)
-                .subscribe((res: any) => {
-                    this.toaster.success(res.message);
-                    this.getPromotionalBannerList();
-                }, (err: HttpErrorResponse) => {
-                    this.spinner.hide()
-                    this.toaster.error(err.error?.message || 'Something went wrong!')
+                .subscribe({
+                    next: (res: any) => {
+                        this.toaster.success(res.message);
+                        this.getPromotionalBannerList();
+                    },
+                    error: (err: HttpErrorResponse) => {
+                        this.spinner.hide();
+                        this.toaster.error(err.error?.message || 'Something went wrong!');
+                    }
                 });
         }
 

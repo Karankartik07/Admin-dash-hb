@@ -20,17 +20,16 @@ import { Transaction } from '../orders/transaction';
 import { NgbdSortableHeader, SortEvent } from '../sortable-directive';
 import { productList, productModel } from '../product.model';
 import { saveAs } from 'file-saver';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CsvService } from '../../../core/services/csv.service';
 import { HbSwitchComponent } from '../../../shared/ui/hb-switch/hb-switch.component';
 const FILTER_PAG_REGEX = /[^0-9]/g;
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -39,14 +38,12 @@ const FILTER_PAG_REGEX = /[^0-9]/g;
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
     NgbdSortableHeader,
@@ -59,11 +56,6 @@ const FILTER_PAG_REGEX = /[^0-9]/g;
   styleUrls: ['./products.component.scss'],
   providers: [TransactionService, DecimalPipe]
 })
-
-/**
- * Ecommerce products component
- */
-
 export class ProductsComponent implements OnInit {
 
   search: string = '';
@@ -138,16 +130,20 @@ export class ProductsComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Products', active: true }];
-    
-    this.route.queryParams.subscribe((res: any) => {
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getProductList();
-    });
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Products', active: true }];
+        
+        this.route.queryParams.subscribe((res: any) => {
+          setTimeout(() => {
+            this.pageSize = res.limit ? parseInt(res.limit) : 10;
+            this.page = res.page ? parseInt(res.page) : 1;
+            this.getProductList();
+          });
+        });
 
-    this.getBrands();
-    this.checkHiddenColumn();
+        this.getBrands();
+        this.checkHiddenColumn();
+    });
   }
 
   getProductList() {
@@ -158,11 +154,11 @@ export class ProductsComponent implements OnInit {
       search: this.search,
       ...this.filter,
     }
-    this.spinner.show()
+    this.spinner.show();
     this.apiService.getProductList(params)
       .subscribe({
         next: (res: any) => {
-          this.spinner.hide()
+          this.spinner.hide();
           if (res.data) {
             setTimeout(() => {
               this.dataArray = res.data?.products;
@@ -172,8 +168,8 @@ export class ProductsComponent implements OnInit {
           }
         },
         error: (err: any) => {
-          this.spinner.hide()
-          console.log("err", err)
+          this.spinner.hide();
+          console.error(err);
         }
       });
 
@@ -189,31 +185,38 @@ export class ProductsComponent implements OnInit {
       ...this.filter,
     }
 
-    console.log("PARAMS: ", params);
-    this.spinner.show()
+    this.spinner.show();
     this.apiService.getProductList(params)
       .subscribe({
         next: (res: any) => {
-          this.spinner.hide()
+          this.spinner.hide();
           if (res.data) {
-            this.dataArrayDownload = res.data?.products;
-            this.downloadCSV();
+            setTimeout(() => {
+                this.dataArrayDownload = res.data?.products;
+                this.downloadCSV();
+                this.cdr.detectChanges();
+            });
           }
         },
         error: (err: any) => {
-          this.spinner.hide()
-          console.log("err", err)
+          this.spinner.hide();
+          console.error(err);
         }
       });
 
   }
 
   getBrands() {
-    this.apiService.getBrandListingAll().subscribe((res: any) => {
-      this.brands = res.data
-
-    }, (err: HttpErrorResponse) => {
-
+    this.apiService.getBrandListingAll().subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.brands = res.data;
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: HttpErrorResponse) => {
+            console.error(err);
+        }
     });
   }
 
@@ -384,13 +387,20 @@ export class ProductsComponent implements OnInit {
         active: value.active
       }
 
-      firstValueFrom(this.apiService.updateProduct(data))
-        .then((res: any) => {
-          this.toaster.success(res.message);
-        })
-        .catch((err: any) => {
-          this.toaster.error(err.error.error);
-        });
+      this.apiService.updateProduct(data).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.toaster.success(res.message);
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                this.toaster.error(err.error?.message || 'Error updating product');
+                this.cdr.detectChanges();
+            });
+        }
+      });
     }
 
     if (type == 'approve') {
@@ -401,14 +411,20 @@ export class ProductsComponent implements OnInit {
         approve: value.is.approve
       }
 
-      firstValueFrom(this.apiService.toggleApprove(data))
-        .then((res: any) => {
-          this.toaster.success(res.message);
-        })
-        .catch((err: any) => {
-          this.toaster.error(err.error.error);
-        });
-
+      this.apiService.toggleApprove(data).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.toaster.success(res.message);
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                this.toaster.error(err.error?.message || 'Error toggling approval');
+                this.cdr.detectChanges();
+            });
+        }
+      });
     }
 
   }
@@ -419,16 +435,24 @@ export class ProductsComponent implements OnInit {
 
   removeProduct(data) {
     if (!confirm(`Are you sure you want to delete "${data.name}" product ? `)) return;
-    this.spinner.show()
-    firstValueFrom(this.apiService.removeProduct(data._id)).then((res : any) => {
-        this.spinner.hide()
-        this.toaster.success(res.message);
-        this.getProductList();
-      })
-      .catch((err: any) => {
-        this.spinner.hide()
-        this.toast.error(err?.error?.message);
-      })
+    this.spinner.show();
+    this.apiService.removeProduct(data._id).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.spinner.hide();
+                this.toaster.success(res.message);
+                this.getProductList();
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                this.spinner.hide();
+                this.toast.error(err?.error?.message);
+                this.cdr.detectChanges();
+            });
+        }
+    });
   }
 
   selectPage(page: string) {

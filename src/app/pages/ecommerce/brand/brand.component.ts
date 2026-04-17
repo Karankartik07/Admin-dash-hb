@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -22,8 +22,6 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -39,7 +37,6 @@ import { Observable } from 'rxjs';
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
     NgbdSortableHeader,
@@ -68,14 +65,16 @@ export class BrandComponent implements OnInit {
   constructor(
     private apiService: EcommerceService,
     private toaster: ToastrService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Brands', active: true }];
-
-    this.getBrandList();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Brands', active: true }];
+        this.getBrandList();
+    });
   }
 
   getBrandList() {
@@ -83,9 +82,12 @@ export class BrandComponent implements OnInit {
     this.apiService.getBrandList(url)
       .subscribe({
         next: (res: any) => {
-          if (res.data.brands) {
-            this.dataArray = res.data.brands;
-            this.count = res.data.count;
+          if (res.data && res.data.brands) {
+            setTimeout(() => {
+              this.dataArray = res.data.brands;
+              this.count = res.data.count;
+              this.cdr.detectChanges();
+            });
           }
         },
         error: (err: any) => {
@@ -108,13 +110,22 @@ export class BrandComponent implements OnInit {
         isTop: !data.isTop,
         _id: data._id
       };
-      this.apiService.toggleBrandTop(body).subscribe(res => {
-        data.toggleTopLoading = false;
-        data.isTop = !data.isTop;
-        observer.next(true);
-      }, error => {
-        data.toggleTopLoading = false;
-        observer.next(false);
+      this.apiService.toggleBrandTop(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleTopLoading = false;
+                data.isTop = !data.isTop;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleTopLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
 
@@ -123,11 +134,14 @@ export class BrandComponent implements OnInit {
     this.apiService.removeBrand(id)
       .subscribe({
         next: (res: any) => {
-          this.toaster.success(res.message);
-          this.getBrandList();
+          setTimeout(() => {
+            this.toaster.success(res.message);
+            this.getBrandList();
+            this.cdr.detectChanges();
+          });
         },
         error: (err: any) => {
-          this.toaster.error(err.error);
+          this.toaster.error(err.error?.message || 'Error removing brand');
         }
       });
 

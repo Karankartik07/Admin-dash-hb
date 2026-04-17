@@ -8,7 +8,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -23,8 +23,6 @@ import { map } from 'rxjs/operators';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -33,17 +31,14 @@ import { map } from 'rxjs/operators';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
-    NgbModalModule,
-    NgbdSortableHeader
+    NgbModalModule
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-menu',
@@ -74,20 +69,30 @@ export class MenuComponent implements OnInit {
     private apiService: EcommerceService,
     private spinner: NgxSpinnerService,
     private toastr: ToastrService,
+    private cdr: ChangeDetectorRef
   ) {
     this.transactions$ = service.transactions$;
     this.total$ = service.total$;
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Menu', active: true }];
-    this.getList();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Menu', active: true }];
+        this.getList();
+    });
   }
 
   getList() {
     this.apiService.getMenuList().subscribe({
       next: (res: any) => {
-        this.menu = JSON.parse(JSON.stringify(res.data.menus));
+        setTimeout(() => {
+          if (res.data && res.data.menus) {
+            this.menu = JSON.parse(JSON.stringify(res.data.menus));
+          } else {
+            this.menu = [];
+          }
+          this.cdr.detectChanges();
+        });
       },
       error: (err: any) => {
         console.log("err", err);
@@ -101,9 +106,12 @@ export class MenuComponent implements OnInit {
       this.spinner.show();
       this.apiService.deleteMenu(id).subscribe({
         next: (res: any) => {
-          this.spinner.hide();
-          list.splice(list.indexOf(item), 1);
-          this.toastr.success('Menu link removed successfully');
+          setTimeout(() => {
+            this.spinner.hide();
+            list.splice(list.indexOf(item), 1);
+            this.toastr.success('Menu link removed successfully');
+            this.cdr.detectChanges();
+          });
         },
         error: (err: HttpErrorResponse) => {
           this.spinner.hide();

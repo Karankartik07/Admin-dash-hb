@@ -8,7 +8,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -22,8 +22,6 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -39,7 +37,6 @@ import { Observable } from 'rxjs';
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
     NgbdSortableHeader
@@ -70,23 +67,29 @@ export class SeasonsComponent implements OnInit {
   constructor(
     public service: TransactionService,
     private apiService: EcommerceService,
-    private toaster: ToastrService
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
   ) {
     this.transactions$ = service.transactions$;
     this.total$ = service.total$;
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Seasons', active: true }];
-    this.getList();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Seasons', active: true }];
+        this.getList();
+    });
   }
 
   getList() {
     this.apiService.getSeasonList().subscribe({
       next: (res: any) => {
-        this.list = res.data;
-        this.count = this.list.length;
-        this.changeValue(null, '');
+        setTimeout(() => {
+          this.list = res.data;
+          this.count = this.list.length;
+          this.changeValue(null, '');
+          this.cdr.detectChanges();
+        });
       },
       error: (err: any) => {
         console.log("err", err);
@@ -110,8 +113,11 @@ export class SeasonsComponent implements OnInit {
   removeSeason(id) {
     this.apiService.removeSeason(id).subscribe({
       next: (res: any) => {
-        this.toaster.success(res.message);
-        this.getList();
+        setTimeout(() => {
+            this.toaster.success(res.message);
+            this.getList();
+            this.cdr.detectChanges();
+        });
       },
       error: (err: any) => {
         this.toaster.error(err.error?.message || "Something went wrong");
@@ -124,5 +130,6 @@ export class SeasonsComponent implements OnInit {
       this.page = event;
     }
     this.dataArray = this.list.slice((this.page - 1) * this.pageSize, this.page * this.pageSize);
+    this.cdr.detectChanges();
   }
 }

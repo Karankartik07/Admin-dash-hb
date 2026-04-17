@@ -1,4 +1,3 @@
-import { firstValueFrom } from 'rxjs';
 import { CommonModule, AsyncPipe, DecimalPipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, NgModel, NgForm, FormGroup, Validators, AbstractControl, FormArray } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -9,17 +8,16 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
 import { ToastrService } from 'ngx-toastr';
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -28,17 +26,14 @@ import { ToastrService } from 'ngx-toastr';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-enquiry-detail',
@@ -54,34 +49,46 @@ export class EnquiryDetailComponent implements OnInit {
     private router: Router,
     private api: EcommerceService,
     private spinner: NgxSpinnerService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.route.params.subscribe(params => {
-      const id = params['id'];
-      if (id) this.loadEnquiry(id);
+    setTimeout(() => {
+        this.route.params.subscribe(params => {
+          setTimeout(() => {
+            const id = params['id'];
+            if (id) this.loadEnquiry(id);
+          });
+        });
     });
   }
 
   loadEnquiry(id: string) {
     const params: any = { enquiryId: id };
     this.spinner.show();
-    firstValueFrom(this.api.getDetailsByEnquiryId(params))
-      .then((res: any) => {
+    this.api.getDetailsByEnquiryId(params).subscribe({
+      next: (res: any) => {
         this.spinner.hide();
         if (res && res.success) {
-          const data = Array.isArray(res.data) ? res.data[0] : res.data;
-          this.enquiry = data || null;
+          setTimeout(() => {
+            const data = Array.isArray(res.data) ? res.data[0] : res.data;
+            this.enquiry = data || null;
+            this.cdr.detectChanges();
+          });
         } else {
-          this.enquiry = null;
-          this.toastr.error('Unable to fetch enquiry details');
+          setTimeout(() => {
+            this.enquiry = null;
+            this.toastr.error('Unable to fetch enquiry details');
+            this.cdr.detectChanges();
+          });
         }
-      })
-      .catch((err: any) => {
+      },
+      error: (err: any) => {
         this.spinner.hide();
         this.toastr.error(err?.error?.message || 'Failed to load enquiry details');
-      });
+      }
+    });
   }
 
   back() {

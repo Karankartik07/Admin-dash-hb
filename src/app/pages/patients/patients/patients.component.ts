@@ -1,4 +1,4 @@
-import { Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { UserService } from '../../contacts/userlist/user.service';
 import { NgbdSortableHeader } from '../../contacts/userlist/sortable.directive';
@@ -42,11 +42,14 @@ export class PatientsComponent implements OnInit {
     private toaster: ToastrService,
     private consultantService: ConsultantApiService,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Contacts' }, { label: 'User List', active: true }];
-    this.getUSerList();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Contacts' }, { label: 'User List', active: true }];
+        this.getUSerList();
+    });
   }
 
   getUSerList() {
@@ -59,8 +62,11 @@ export class PatientsComponent implements OnInit {
       data.keyword = this.search;
       this.consultantService.getPatientsList(data).subscribe(res => {
         this.spinner.hide()
-        this.users$ = res.data;
-        this.total$ = res.total;
+        setTimeout(() => {
+            this.users$ = res.data;
+            this.total$ = res.total;
+            this.cdr.detectChanges();
+        });
       }, ((err: HttpErrorResponse) => {
         this.spinner.hide()
       }));
@@ -68,8 +74,11 @@ export class PatientsComponent implements OnInit {
       this.consultantService.getPatientsList(data)
         .subscribe((res: any) => {
           this.spinner.hide()
-          this.users$ = res.data;
-          this.total$ = res.total;
+          setTimeout(() => {
+              this.users$ = res.data;
+              this.total$ = res.total;
+              this.cdr.detectChanges();
+          });
         }, (err: any) => {
           this.spinner.hide()
         })

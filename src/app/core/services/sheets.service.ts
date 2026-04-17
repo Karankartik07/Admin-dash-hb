@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Alignment, Border, Borders, Workbook } from "exceljs";
-import * as saveAs from "file-saver";
+import saveAs from "file-saver";
 import { getFormatedDate } from 'src/app/util/date.util';
 
 @Injectable({

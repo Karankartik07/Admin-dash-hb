@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { environment } from 'src/environments/environment';
 import { NgForm, NgModel } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -37,11 +37,14 @@ export class DiagnosticCancellationRequestsComponent implements OnInit {
     private toaster: ToastrService,
     private diagnosticsService: DiagnosticsService,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) {
   }
 
   ngOnInit() {
-    this.getList()
+    setTimeout(() => {
+        this.getList()
+    });
   }
 
   getList() {
@@ -55,8 +58,11 @@ export class DiagnosticCancellationRequestsComponent implements OnInit {
     this.spinner.show()
     this.diagnosticsService.getDiagnosticBookings(params).subscribe(res => {
       this.spinner.hide()
-      this.list = res.data;
-      this.total = res.total;
+      setTimeout(() => {
+          this.list = res.data;
+          this.total = res.total;
+          this.cdr.detectChanges();
+      });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()
 

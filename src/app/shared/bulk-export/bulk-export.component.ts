@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from "@angular/core";
 import moment from "moment";
-import * as saveAs from "file-saver";
+import saveAs from "file-saver";
 import { ToastrService } from "ngx-toastr";
 import { CsvService } from "../../core/services/csv.service";
 

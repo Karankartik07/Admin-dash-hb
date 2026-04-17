@@ -21,8 +21,6 @@ import { Observable, forkJoin } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -31,18 +29,14 @@ import { Observable, forkJoin } from 'rxjs';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
-    NgbModalModule
-
-  , HbSwitchComponent],
+    NgbModalModule, HbSwitchComponent],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'add-promotional-banner',
     templateUrl: './add-promotional-banner.component.html',

@@ -8,19 +8,18 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
 import { ToastrService } from 'ngx-toastr';
 import { NgbdSortableHeader, SortEvent } from '../sortable-directive';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -36,10 +35,8 @@ import { Observable, firstValueFrom } from 'rxjs';
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-coupons',
@@ -60,22 +57,29 @@ export class CouponsComponent implements OnInit {
 
   constructor(
     private apiService: EcommerceService,
-    private toaster: ToastrService
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Coupons', active: true }];
-
-    this.getCoupons();
-
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Coupons', active: true }];
+        this.getCoupons();
+    });
   }
 
   getCoupons() {
-    firstValueFrom(this.apiService.getCoupons())
-      .then((res: any) => {
-        this.couponList = res.data
-      })
-      .catch((err: any) => { });
+    this.apiService.getCoupons().subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.couponList = res.data;
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            console.error(err);
+        }
+    });
   }
 
   changeValue(event, type) {
@@ -93,26 +97,41 @@ export class CouponsComponent implements OnInit {
         active: !data.active,
         _id: data._id
       }
-      this.apiService.updateCoupon(body).subscribe(res => {
-        data.toggleStatusLoading = false;
-        data.active = !data.active;
-        observer.next(true)
-      }, error => {
-        data.toggleStatusLoading = false;
-        observer.next(false)
-      })
+      this.apiService.updateCoupon(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleStatusLoading = false;
+                data.active = !data.active;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleStatusLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
+      });
     });
 
   }
 
 
   removeCoupon(id) {
-    firstValueFrom(this.apiService.removeCoupon(id))
-      .then((res: any) => {
-        this.toaster.success(res.message);
-        this.getCoupons();
-      })
-      .catch((err: any) => { this.toaster.error(err) });
+    this.apiService.removeCoupon(id).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.toaster.success(res.message);
+                this.getCoupons();
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error removing coupon');
+        }
+    });
   }
 
 

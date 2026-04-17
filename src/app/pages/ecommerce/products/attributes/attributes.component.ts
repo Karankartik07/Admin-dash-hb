@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
@@ -18,13 +18,11 @@ import { TransactionService } from '../../orders/transaction.service';
 import { Transaction } from '../../orders/transaction';
 import { NgbdSortableHeader, SortEvent } from '../../sortable-directive';
 import { AddAttributeComponent } from '../../modals/add-attribute/add-attribute.component';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -33,17 +31,14 @@ import { Observable, firstValueFrom } from 'rxjs';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   , HbSwitchComponent],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-attributes',
@@ -66,28 +61,36 @@ export class AttributesComponent implements OnInit {
     private apiService: EcommerceService,
     private toaster: ToastrService,
     private modalService: NgbModal,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) { 
     this.transactions$ = service.transactions$;
     this.total$ = service.total$;
   }
 
   ngOnInit(){
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Attributes', active: true }];
-
-    this.getAttributeSet();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Attributes', active: true }];
+        this.getAttributeSet();
+    });
   }
 
   getAttributeSet(){
-    firstValueFrom(this.apiService.getAttributeSet())
-    .then((res:any)=>{
-      if(res.data.attributeSets){
-        this.dataArray = res.data.attributeSets;
-      }
-    })
-    .catch((err:any)=>{
-      this.toaster.error(err.error);
-    })
+    this.apiService.getAttributeSet().subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                if(res.data && res.data.attributeSets) {
+                    this.dataArray = res.data.attributeSets;
+                } else {
+                    this.dataArray = [];
+                }
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error fetching attribute sets');
+        }
+    });
   }
 
   openAttributeAddmodal(data=""){
@@ -109,14 +112,18 @@ export class AttributesComponent implements OnInit {
   }
 
   deleteAttributeSet(id){
-    firstValueFrom(this.apiService.deleteAttributeSet(id))
-    .then((res:any)=>{
-      this.toaster.success(res.message);
-      this.getAttributeSet();
-    })
-    .catch((err:any)=>{
-      this.toaster.error(err.error.error);
-    })
+    this.apiService.deleteAttributeSet(id).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.toaster.success(res.message);
+                this.getAttributeSet();
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error deleting attribute set');
+        }
+    });
   }
 
   openAttributeListing(id){

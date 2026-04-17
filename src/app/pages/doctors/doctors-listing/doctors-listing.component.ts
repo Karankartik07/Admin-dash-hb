@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -33,16 +33,21 @@ export class DoctorsListingComponent implements OnInit {
     private authService: AuthenticationService,
     private doctorService: DoctorsService,
     private toaster: ToastrService,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.breadCrumbItems = [{ label: 'Consultancy' }, { label: 'Doctors', active: true }];
-    this.user = this.authService.currentUser()
-    this.route.queryParams.subscribe((res: any) => {
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getDoctorList();
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Consultancy' }, { label: 'Doctors', active: true }];
+      this.user = this.authService.currentUser()
+      this.route.queryParams.subscribe((res: any) => {
+        setTimeout(() => {
+          this.pageSize = res.limit ? parseInt(res.limit) : 10;
+          this.page = res.page ? parseInt(res.page) : 1;
+          this.getDoctorList();
+        });
+      });
     });
   }
 
@@ -53,9 +58,12 @@ export class DoctorsListingComponent implements OnInit {
     }
     this.doctorService.getDoctorList(url)
       .subscribe((res: any) => {
-        console.log("data", res.data);
-        this.count = res.count;
-        this.doctorArray = res.data
+        setTimeout(() => {
+          console.log("data", res.data);
+          this.count = res.count;
+          this.doctorArray = res.data;
+          this.cdr.detectChanges();
+        });
       }, (err: HttpErrorResponse) => {
         console.log("err", err)
       })
@@ -73,9 +81,12 @@ export class DoctorsListingComponent implements OnInit {
         _id: data._id
       }
       this.doctorService.updateDoctor(body).subscribe(res => {
-        data.toggleActiveLoading = false;
-        data.active = !data.active;
-        observer.next(true)
+        setTimeout(() => {
+          data.toggleActiveLoading = false;
+          data.active = !data.active;
+          this.cdr.detectChanges();
+          observer.next(true);
+        });
       }, error => {
         data.toggleActiveLoading = false;
         observer.next(false)
@@ -92,10 +103,13 @@ export class DoctorsListingComponent implements OnInit {
         _id: data._id
       }
       this.doctorService.toggleUserAccount(body).subscribe((res: any) => {
-        data.toggleActivateLoading = false;
-        data.activate = !data.activate;
-        observer.next(true);
-        this.toaster.success(res.message);
+        setTimeout(() => {
+          data.toggleActivateLoading = false;
+          data.activate = !data.activate;
+          this.cdr.detectChanges();
+          observer.next(true);
+          this.toaster.success(res.message);
+        });
       }, error => {
         data.toggleActivateLoading = false;
         observer.next(false)
@@ -111,8 +125,11 @@ export class DoctorsListingComponent implements OnInit {
       isTopConsultant: !data.isTopConsultant
     }
     this.doctorService.updateDoctor(body).subscribe((res: any) => {
-      data.isTopConsultant = !data.isTopConsultant;
-      this.toaster.success(res.message);
+      setTimeout(() => {
+        data.isTopConsultant = !data.isTopConsultant;
+        this.toaster.success(res.message);
+        this.cdr.detectChanges();
+      });
     }, error => {
 
     })
@@ -148,8 +165,11 @@ export class DoctorsListingComponent implements OnInit {
       (result) => {
         if (result == "yes") {
           this.doctorService.removeConsultant(id).subscribe((res: any) => {
-            this.toaster.success(res.message);
-            this.getDoctorList();
+            setTimeout(() => {
+              this.toaster.success(res.message);
+              this.getDoctorList();
+              this.cdr.detectChanges();
+            });
           }, (err: HttpErrorResponse) => {
             this.toaster.error(err.error.message);
           })
@@ -163,15 +183,10 @@ export class DoctorsListingComponent implements OnInit {
 
   showAction(type: string) {
     return true;
-    // switch (type) {
-    //   case 'edit': return this.user.role.includes('Admin')
-    //   case 'delete': return this.user.role.includes('Admin')
-    //   default: return false;
-    // }
   }
 
   onSearch(form: NgForm) {
-    this.search = form.value.searchTerm.trim();
+    this.search = (form.value.searchTerm || '').trim();
     this.page = 1;
     this.getDoctorList();
   }

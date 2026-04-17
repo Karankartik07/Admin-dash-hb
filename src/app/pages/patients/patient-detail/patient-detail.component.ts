@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CalendarOptions , EventClickArg, EventApi  } from '@fullcalendar/core';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { category, calendarEvents, createEventId } from '../../calendar/data';
@@ -68,22 +68,28 @@ export class PatientDetailComponent implements OnInit {
     private api: ConsultantApiService,
     private contactsService: ContactsService,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.userId = this.route.snapshot.params.id;
-    this.getUserProfile()
-    this.getAppointments()
-    this.getPrescriptions()
-    this.getMedicalrecord()
-    this.getConsultationPayments()
+    setTimeout(() => {
+        this.userId = this.route.snapshot.params.id;
+        this.getUserProfile()
+        this.getAppointments()
+        this.getPrescriptions()
+        this.getMedicalrecord()
+        this.getConsultationPayments()
+    });
   }
 
   getUserProfile() {
     this.contactsService.getUserDetail(this.userId).subscribe(res => {
       let { success, data } = res
       if (success && data) {
-        this.profile = data;
+        setTimeout(() => {
+            this.profile = data;
+            this.cdr.detectChanges();
+        });
       } else {
 
       }
@@ -102,8 +108,11 @@ export class PatientDetailComponent implements OnInit {
       this.spinner.hide()
       let { success, data, total } = res;
       if (success && data) {
-        this.appointments = data
-        this.pagination.appointments.count = total;
+        setTimeout(() => {
+            this.appointments = data
+            this.pagination.appointments.count = total;
+            this.cdr.detectChanges();
+        });
       } else {
 
       }
@@ -122,8 +131,11 @@ export class PatientDetailComponent implements OnInit {
       this.spinner.hide()
       let { success, data, total } = res;
       if (success && data) {
-        this.prescriptions = data
-        this.pagination.prescriptions.count = total;
+        setTimeout(() => {
+            this.prescriptions = data
+            this.pagination.prescriptions.count = total;
+            this.cdr.detectChanges();
+        });
       } else {
 
       }
@@ -142,8 +154,11 @@ export class PatientDetailComponent implements OnInit {
       this.spinner.hide()
       let { success, data, count } = res;
       if (success && data) {
-        this.medicalRecords = data;
-        this.pagination.medicalRecords.count = count;
+        setTimeout(() => {
+            this.medicalRecords = data;
+            this.pagination.medicalRecords.count = count;
+            this.cdr.detectChanges();
+        });
       } else {
 
       }
@@ -163,8 +178,11 @@ export class PatientDetailComponent implements OnInit {
       this.spinner.hide()
       let { success, data, total } = res;
       if (success && data) {
-        this.payments = data;
-        this.pagination.payments.count = total;
+        setTimeout(() => {
+            this.payments = data;
+            this.pagination.payments.count = total;
+            this.cdr.detectChanges();
+        });
       }
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()

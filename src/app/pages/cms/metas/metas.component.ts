@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ToastrService } from 'ngx-toastr';
 import { RemoveModalComponent } from '../../ecommerce/modals/remove/remove-modal/remove-modal.component';
@@ -23,22 +23,28 @@ export class MetasComponent implements OnInit {
   constructor(
     private cmsService: CmsService,
     private modal: NgbModal,
-    private toaster: ToastrService
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.breadCrumbItems = [{ label: 'Metas' }, { label: 'Metas List', active: true }];
-    this.getMetaList();
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Metas' }, { label: 'Metas List', active: true }];
+      this.getMetaList();
+    });
   }
 
   getMetaList(){
     this.cmsService.getMetaData().subscribe((res:any)=>{
-        this.dataArray = res.data;
+        setTimeout(() => {
+          this.dataArray = res.data;
+          this.cdr.detectChanges();
+        });
     }, (err:HttpErrorResponse)=>{
 
     })
   }
-  
+
   onSort({ column, direction }: SortEvent) {
 
     // resetting other headers
@@ -64,11 +70,14 @@ export class MetasComponent implements OnInit {
     modal.result.then((result)=>{
       if(result=='yes'){
         this.cmsService.removeMeta(id).subscribe((res:any)=>{
-          this.toaster.success(res.message);
-          this.getMetaList();
+          setTimeout(() => {
+            this.toaster.success(res.message);
+            this.getMetaList();
+            this.cdr.detectChanges();
+          });
         }, (err:HttpErrorResponse)=>{
           this.toaster.error("Something went wrong");
-        })  
+        })
       }
     })
   }

@@ -8,7 +8,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
@@ -16,12 +16,11 @@ import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../../../../environments/environment';
 import { getFormatedDate } from '../../../../util/date.util';
 import { map } from 'rxjs/operators';
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -30,17 +29,14 @@ import { map } from 'rxjs/operators';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-order-detail',
@@ -86,35 +82,47 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
     private spinner: NgxSpinnerService,
     private toastr: ToastrService,
     private modalService: NgbModal,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [
-      { label: "Ecommerce" },
-      { label: "Order Details", active: true },
-    ];
-    this.orderId = this.route.snapshot.params.id;
-    this.getOrderDetail();
+    setTimeout(() => {
+        this.breadCrumbItems = [
+          { label: "Ecommerce" },
+          { label: "Order Details", active: true },
+        ];
+        this.orderId = this.route.snapshot.params.id;
+        this.getOrderDetail();
+    });
   }
 
   ngAfterViewInit(): void {
-    if (this.route.snapshot.queryParams['showPaymentLink'] == 'true')
-      this.openLinkModal(this.paymentLinkModal);
+    setTimeout(() => {
+        if (this.route.snapshot.queryParams['showPaymentLink'] == 'true')
+          this.openLinkModal(this.paymentLinkModal);
+    });
   }
 
   getOrderDetail() {
     this.spinner.show();
-    this.apiService.getOrderDetails(this.orderId).subscribe((res: any) => {
-      this.spinner.hide();
-      if (res.data) {
-        this.orderDetails = res.data;
-        this.products = res.data.products;
-        this.shipments = res.data.shippingDetails;
-      }
-    }, (err: any) => {
-      this.spinner.hide();
-    })
+    this.apiService.getOrderDetails(this.orderId).subscribe({
+        next: (res: any) => {
+          this.spinner.hide();
+          if (res.data) {
+            setTimeout(() => {
+              this.orderDetails = res.data;
+              this.products = res.data.products;
+              this.shipments = res.data.shippingDetails;
+              this.cdr.detectChanges();
+            });
+          }
+        }, 
+        error: (err: any) => {
+          this.spinner.hide();
+          console.error(err);
+        }
+    });
   }
 
   onShowPaymentForm() {
@@ -130,6 +138,9 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
       txnId: this.orderDetails.paymentDetails?.txnId || '',
       txnDate: txnDate,
     });
+    setTimeout(() => {
+        this.cdr.detectChanges();
+    });
   }
 
   navigateToUser(user) {
@@ -139,6 +150,9 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
   onChangePayType() {
     let { paymentMethod } = this.paymentFormGroup.value;
     paymentMethod == 'cod' ? this.paymentFormGroup.get('txnId').disable() : this.paymentFormGroup.get('txnId').enable();
+    setTimeout(() => {
+        this.cdr.detectChanges();
+    });
   }
 
   onSubmitTxnInfo() {
@@ -150,25 +164,31 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
     if (data.paymentMethod == 'cod') data.txnId = '';
 
     this.spinner.show();
-    this.apiService.updatePaymentStatus(data as any).subscribe((res: any) => {
-      this.spinner.hide();
-      if (res.success) {
-        this.toastr.success('Payment details updated')
-        this.showTxnInfoForm = false;
-        this.paymentFormGroup.reset();
-        this.orderDetails.paymentType = value.paymentType;
-        this.orderDetails.paymentMethod = value.paymentMethod;
-        this.orderDetails.paymentStatus = value.paymentStatus;
-
-        if (!this.orderDetails.paymentDetails) this.orderDetails.paymentDetails = {};
-        this.orderDetails.paymentDetails.txnId = value.txnId;
-        this.orderDetails.paymentDetails.txnDate = value.txnDate;
-      } else {
-        this.toastr.error('Something went wrong');
-      }
-    }, (err: HttpErrorResponse) => {
-      this.spinner.hide();
-      this.toastr.error('Something went wrong');
+    this.apiService.updatePaymentStatus(data as any).subscribe({
+        next: (res: any) => {
+          this.spinner.hide();
+          if (res.success) {
+            setTimeout(() => {
+                this.toastr.success('Payment details updated')
+                this.showTxnInfoForm = false;
+                this.paymentFormGroup.reset();
+                this.orderDetails.paymentType = value.paymentType;
+                this.orderDetails.paymentMethod = value.paymentMethod;
+                this.orderDetails.paymentStatus = value.paymentStatus;
+        
+                if (!this.orderDetails.paymentDetails) this.orderDetails.paymentDetails = {};
+                this.orderDetails.paymentDetails.txnId = value.txnId;
+                this.orderDetails.paymentDetails.txnDate = value.txnDate;
+                this.cdr.detectChanges();
+            });
+          } else {
+            this.toastr.error('Something went wrong');
+          }
+        }, 
+        error: (err: HttpErrorResponse) => {
+          this.spinner.hide();
+          this.toastr.error('Something went wrong');
+        }
     });
 
 
@@ -179,20 +199,23 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
 
   getPackageSlipData(waybill) {
     this.spinner.show()
-    this.apiService.createPackagingSlip(waybill).subscribe((res: any) => {
-
-      const { success, data } = res;
-      if (success && data.packages_found) {
-        this.packageSlipDetails = data.packages[0]
-        setTimeout(() => {
-          this.printPackageSlip();
-          this.spinner.hide();
-        }, 1500);
-      } else {
-        this.spinner.hide();
-      }
-    }, err => {
-      this.spinner.hide()
+    this.apiService.createPackagingSlip(waybill).subscribe({
+        next: (res: any) => {
+          const { success, data } = res;
+          if (success && data.packages_found) {
+            this.packageSlipDetails = data.packages[0]
+            setTimeout(() => {
+              this.printPackageSlip();
+              this.spinner.hide();
+              this.cdr.detectChanges();
+            }, 1500);
+          } else {
+            this.spinner.hide();
+          }
+        }, 
+        error: err => {
+          this.spinner.hide()
+        }
     });
   }
 
@@ -224,10 +247,16 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
   showCancelProducts() {
     this.productsEligibleForCancel = this.products.filter(el => ['processing', 'hold', 'placed'].includes(el.statusDetails));
     if (this.productsEligibleForCancel.length) this.cancelProducts = true;
+    setTimeout(() => {
+        this.cdr.detectChanges();
+    });
   }
 
   hideCancelProducts() {
     this.cancelProducts = false;
+    setTimeout(() => {
+        this.cdr.detectChanges();
+    });
   }
 
   qtyArray(qty) {
@@ -257,13 +286,19 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
     }
     if(!products.length) { this.toastr.error('Please select some products to generate invoice'); return; }
     this.spinner.show();
-    this.apiService.cancelOrderProducts(data).subscribe((res: any) => {
-      this.toastr.success('Product(s) canceled successfully');
-      this.hideCancelProducts();
-      this.getOrderDetail();
-    }, error => {
-      this.spinner.hide();
-      this.toastr.error('Something went wrong');
+    this.apiService.cancelOrderProducts(data).subscribe({
+        next: (res: any) => {
+          setTimeout(() => {
+              this.toastr.success('Product(s) canceled successfully');
+              this.hideCancelProducts();
+              this.getOrderDetail();
+              this.cdr.detectChanges();
+          });
+        }, 
+        error: error => {
+          this.spinner.hide();
+          this.toastr.error('Something went wrong');
+        }
     });
   }
 
@@ -295,7 +330,9 @@ export class OrderDetailComponent implements OnInit, AfterViewInit {
       centered: true,
     });
     window.scroll(0, 0);
-
+    setTimeout(() => {
+        this.cdr.detectChanges();
+    });
   }
 
 }

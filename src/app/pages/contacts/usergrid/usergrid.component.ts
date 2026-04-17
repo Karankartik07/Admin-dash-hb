@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 
 import { Usergrid } from './usergrid.model';
 
@@ -20,15 +20,18 @@ export class UsergridComponent implements OnInit {
 
   userGridData: Usergrid[];
 
-  constructor() { }
+  constructor(private cdr: ChangeDetectorRef) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Contacts' }, { label: 'Users Grid', active: true }];
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Contacts' }, { label: 'Users Grid', active: true }];
 
-    /**
-     * fetches data
-     */
-    this._fetchData();
+        /**
+         * fetches data
+         */
+        this._fetchData();
+        this.cdr.detectChanges();
+    });
   }
 
   /**

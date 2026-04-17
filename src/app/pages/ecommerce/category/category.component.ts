@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
@@ -22,8 +22,6 @@ import { Observable } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -39,7 +37,6 @@ import { Observable } from 'rxjs';
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
     NgbdSortableHeader,
@@ -71,19 +68,22 @@ export class CategoryComponent implements OnInit {
     private apiService: EcommerceService,
     private router: Router,
     private route: ActivatedRoute,
-    private toaster: ToastrService
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
   ) {
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Category', active: true }];
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Category', active: true }];
 
-    this.childId = this.route.snapshot.params.id;
-    if (this.childId) {
-      this.fetchCategory();
-    } else {
-      this.getCategoryList();
-    }
+        this.childId = this.route.snapshot.params.id;
+        if (this.childId) {
+          this.fetchCategory();
+        } else {
+          this.getCategoryList();
+        }
+    });
   }
 
   getCategoryList() {
@@ -91,9 +91,12 @@ export class CategoryComponent implements OnInit {
     this.apiService.getCategoryList(url)
       .subscribe({
         next: (res: any) => {
-          if (res.data.categories) {
-            this.dataArray = res.data.categories;
-            this.total = res.data.count;
+          if (res.data && res.data.categories) {
+            setTimeout(() => {
+              this.dataArray = res.data.categories;
+              this.total = res.data.count;
+              this.cdr.detectChanges();
+            });
           }
         },
         error: (err: any) => {
@@ -108,7 +111,14 @@ export class CategoryComponent implements OnInit {
     this.apiService.getCategoryList(url)
       .subscribe({
         next: (res: any) => {
-          this.dataArray = res.data.children;
+          setTimeout(() => {
+            if (res.data && res.data.children) {
+                this.dataArray = res.data.children;
+            } else {
+                this.dataArray = [];
+            }
+            this.cdr.detectChanges();
+          });
         },
         error: (err: any) => {
           console.log("err", err);
@@ -128,12 +138,15 @@ export class CategoryComponent implements OnInit {
     this.apiService.removeCategory(category._id)
       .subscribe({
         next: (res: any) => {
-          this.toaster.success(res.message);
-          if (this.childId) {
-            this.fetchCategory();
-          } else {
-            this.getCategoryList();
-          }
+          setTimeout(() => {
+            this.toaster.success(res.message);
+            if (this.childId) {
+                this.fetchCategory();
+            } else {
+                this.getCategoryList();
+            }
+            this.cdr.detectChanges();
+          });
         },
         error: (err: any) => {
           console.log("err", err);
@@ -157,13 +170,22 @@ export class CategoryComponent implements OnInit {
         isTop: !data.isTop,
         _id: data._id
       };
-      this.apiService.toggleCategoryTop(body).subscribe(res => {
-        data.toggleTopLoading = false;
-        data.isTop = !data.isTop;
-        observer.next(true);
-      }, error => {
-        data.toggleTopLoading = false;
-        observer.next(false);
+      this.apiService.toggleCategoryTop(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleTopLoading = false;
+                data.isTop = !data.isTop;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleTopLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
   }
@@ -175,13 +197,22 @@ export class CategoryComponent implements OnInit {
         isFeatured: !data.isFeatured,
         _id: data._id
       };
-      this.apiService.toggleCategoryFeatured(body).subscribe(res => {
-        data.toggleFeaturedLoading = false;
-        data.isFeatured = !data.isFeatured;
-        observer.next(true);
-      }, error => {
-        data.toggleFeaturedLoading = false;
-        observer.next(false);
+      this.apiService.toggleCategoryFeatured(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleFeaturedLoading = false;
+                data.isFeatured = !data.isFeatured;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleFeaturedLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
       });
     });
   }

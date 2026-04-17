@@ -22,8 +22,6 @@ import { AddAttributeToSetComponent } from '../../../modals/add-attribute-to-set
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -32,18 +30,14 @@ import { AddAttributeToSetComponent } from '../../../modals/add-attribute-to-set
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
-    NgbModalModule
-
-  , HbSwitchComponent],
+    NgbModalModule, HbSwitchComponent],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-attribute-listing',
   templateUrl: './attribute-listing.component.html',

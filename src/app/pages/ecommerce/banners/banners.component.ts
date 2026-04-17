@@ -9,19 +9,18 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { EcommerceService } from '../ecommerce.service';
 import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../../../environments/environment';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -30,17 +29,14 @@ import { Observable, firstValueFrom } from 'rxjs';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   , HbSwitchComponent],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-banners',
@@ -58,27 +54,34 @@ export class BannersComponent implements OnInit {
   constructor(
     private apiService: EcommerceService,
     private spinner: NgxSpinnerService,
-    private toaster: ToastrService
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Banners', active: true }];
-    this.getBannersList();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Banners', active: true }];
+        this.getBannersList();
+    });
   }
 
   getBannersList() {
-    this.spinner.show()
-    firstValueFrom(this.apiService.getBannerList())
-      .then((res: any) => {
-        this.spinner.hide()
-        if (res.data.banners) {
-          this.dataArray = res.data.banners
+    this.spinner.show();
+    this.apiService.getBannerList().subscribe({
+        next: (res: any) => {
+            this.spinner.hide();
+            if (res.data && res.data.banners) {
+                setTimeout(() => {
+                    this.dataArray = res.data.banners;
+                    this.cdr.detectChanges();
+                });
+            }
+        },
+        error: (err: any) => {
+            this.spinner.hide();
+            console.error(err);
         }
-      })
-      .catch((err: any) => {
-        this.spinner.hide()
-        console.log(err);
-      });
+    });
   }
 
   toggleFxn(data) {
@@ -88,17 +91,24 @@ export class BannersComponent implements OnInit {
         active: !data.active,
         _id: data._id
       }
-      firstValueFrom(this.apiService.updateBanner(body))
-        .then((res: any) => {
-          data.toggleActiveLoading = false;
-          data.active = !data.active;
-          observer.next(true)
-        })
-        .catch((err: any) => {
-          data.toggleActiveLoading = false;
-          observer.next(false);
-        });
-    })
+      this.apiService.updateBanner(body).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                data.toggleActiveLoading = false;
+                data.active = !data.active;
+                this.cdr.detectChanges();
+                observer.next(true);
+            });
+        },
+        error: (err: any) => {
+            setTimeout(() => {
+                data.toggleActiveLoading = false;
+                this.cdr.detectChanges();
+                observer.next(false);
+            });
+        }
+      });
+    });
   }
 
   changeValue(event, type) {
@@ -107,14 +117,17 @@ export class BannersComponent implements OnInit {
 
   removeBanner(data) {
     if (confirm('Are you sure you want to delete "' + data.title + '" banner?')) {
-      this.spinner.show()
+      this.spinner.show();
       this.apiService.removeBanner(data._id)
-        .subscribe((res: any) => {
-          this.toaster.success(res.message);
-          this.getBannersList();
-        }, (err: HttpErrorResponse) => {
-          this.spinner.hide()
-          this.toaster.error(err.error?.message || 'Something went wrong!')
+        .subscribe({
+            next: (res: any) => {
+              this.toaster.success(res.message);
+              this.getBannersList();
+            }, 
+            error: (err: HttpErrorResponse) => {
+              this.spinner.hide();
+              this.toaster.error(err.error?.message || 'Something went wrong!');
+            }
         });
     }
 

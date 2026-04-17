@@ -1,4 +1,4 @@
-import { Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { NgbdSortableHeader } from '../../ecommerce/sortable-directive';
 
 @Component({
@@ -45,16 +45,18 @@ export class PayoutsComponent implements OnInit {
 
   @ViewChildren(NgbdSortableHeader) headers: QueryList<NgbdSortableHeader>;
 
-  constructor() {
+  constructor(private cdr: ChangeDetectorRef) {
 
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [
-      { label: 'Payouts' },
-      { label: 'List', active: true },
-    ];
-    this.selectedDate = new Date().getDate();
-
+    setTimeout(() => {
+      this.breadCrumbItems = [
+        { label: 'Payouts' },
+        { label: 'List', active: true },
+      ];
+      this.selectedDate = new Date().getDate();
+      this.cdr.detectChanges();
+    });
   }
 }

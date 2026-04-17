@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
@@ -18,8 +18,6 @@ import { ToastrService } from 'ngx-toastr';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -28,17 +26,14 @@ import { ToastrService } from 'ngx-toastr';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-taxes',
@@ -53,7 +48,8 @@ export class TaxesComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private apiService: EcommerceService,
-    private toaster: ToastrService
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { 
     this.taxClassFormGroup = this.formBuilder.group({
       name: [""],
@@ -61,35 +57,39 @@ export class TaxesComponent implements OnInit {
   }
 
   ngOnInit(){
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Taxes', active: true }];
-
-    this.getTaxes();
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Taxes', active: true }];
+        this.getTaxes();
+    });
   }
 
   getTaxes(){
-    firstValueFrom(this.apiService.getTaxes())
-    .then((res:any)=>{
-      if(res.data){
-        this.taxClasses = res.data;
-        for(let taxes of this.taxClasses){
-          if(!taxes.taxSlabs.length){
-            let data = {
-              country: "IN",
-              state: "",
-              pinCode: "",
-              city: "",
-              rate: "",
-              name: "",
-              priority: ""
+    this.apiService.getTaxes().subscribe({
+        next: (res: any) => {
+            if(res.data){
+                setTimeout(() => {
+                    this.taxClasses = res.data;
+                    for(let taxes of this.taxClasses){
+                      if(!taxes.taxSlabs.length){
+                        let data = {
+                          country: "IN",
+                          state: "",
+                          pinCode: "",
+                          city: "",
+                          rate: "",
+                          name: "",
+                          priority: ""
+                        }
+                        taxes.taxSlabs.push(data);
+                      }
+                    }
+                    this.cdr.detectChanges();
+                });
             }
-            taxes.taxSlabs.push(data);
-          }
+        },
+        error: (err: any) => {
+            console.error(err);
         }
-        console.log("tax",this.taxClasses);
-      }
-    })
-    .catch((err:any)=>{
-      /** */
     });
   }
 
@@ -98,14 +98,17 @@ export class TaxesComponent implements OnInit {
       const data  = {
         name: this.taxClassFormGroup.get('name').value
       }
-      firstValueFrom(this.apiService.addTaxClass(data))
-      .then((res:any)=>{
-        this.getTaxes();
-        this.toaster.success(res.message);
-        console.log("res",res);
-      })
-      .catch((err:any)=>{
-        this.toaster.error(err);
+      this.apiService.addTaxClass(data).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.getTaxes();
+                this.toaster.success(res.message);
+                this.cdr.detectChanges();
+              });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error adding tax class');
+        }
       });
       this.taxClassFormGroup.reset();
     }
@@ -115,16 +118,21 @@ export class TaxesComponent implements OnInit {
     const data = {
       _id: _id
     }
-    firstValueFrom(this.apiService.removeTaxClass(data))
-    .then((res:any)=>{
-      this.toaster.success(res.message);
-      this.getTaxes();
-    })
-    .catch((err:any)=>{this.toaster.error(err)})
+    this.apiService.removeTaxClass(data).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.toaster.success(res.message);
+                this.getTaxes();
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error removing tax class');
+        }
+    });
   }
 
   addNewRow(item){
-    console.log("item",item)
     let data = {
       country: "IN",
       state: "",
@@ -135,14 +143,17 @@ export class TaxesComponent implements OnInit {
       priority: ""
     }
     item.taxSlabs.push(data);
+    this.cdr.detectChanges();
   }
 
   removeRow(item){
     item.pop();
+    this.cdr.detectChanges();
   }
 
   onChange(item, index){
     item.taxSlabs.splice(index, 1);
+    this.cdr.detectChanges();
   }
 
   saveTaxes(){
@@ -154,12 +165,14 @@ export class TaxesComponent implements OnInit {
       }
       taxes.push(data);
     }
-    firstValueFrom(this.apiService.addTaxes({'taxes':taxes}))
-    .then((res:any)=>{
-      this.toaster.success(res.message);
-    })
-    .catch((err:any)=>{
-      this.toaster.error(err);
+    this.apiService.addTaxes({'taxes':taxes}).subscribe({
+        next: (res: any) => {
+            this.toaster.success(res.message);
+            this.cdr.detectChanges();
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error saving taxes');
+        }
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ToastrService } from 'ngx-toastr';
@@ -18,7 +18,7 @@ import { AddSpecialityComponent } from './add-speciality/add-speciality.componen
 })
 export class SpecialityComponent implements OnInit {
 
-  breadCrumbItems: Array<{}>; s
+  breadCrumbItems: Array<{}>;
   tempPageSize: any;
   tempsearchTerm: any;
   pageSize = 10;
@@ -39,42 +39,53 @@ export class SpecialityComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private toaster: ToastrService,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private cdr: ChangeDetectorRef
   ) {
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Doctor' }, { label: 'Doctor Type', active: true }];
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Doctor' }, { label: 'Doctor Type', active: true }];
 
-    this.childId = this.route.snapshot.params.id;
-    this.childId
-      ? this.fetchCategory()
-      : this.getTypes();
-
+      this.childId = this.route.snapshot.params.id;
+      this.childId
+        ? this.fetchCategory()
+        : this.getTypes();
+    });
   }
 
   getTypes() {
     const url = `limit=${this.pageSize}&page=${this.page}`;
-    firstValueFrom(this.apiService.getTypes(url))
-      .then((res: any) => {
+    this.apiService.getTypes(url).subscribe({
+      next: (res: any) => {
         if (res.data) {
-          this.dataArray = res.data;
+          setTimeout(() => {
+            this.dataArray = res.data;
+            this.cdr.detectChanges();
+          });
         }
-      })
-      .catch((err: any) => {
+      },
+      error: (err: any) => {
         console.log("err", err);
-      });
+      }
+    });
   }
 
   fetchCategory() {
     let url = `/detail ? _id=${this.childId}`;
 
-    firstValueFrom(this.apiService.getCategoryList(url))
-      .then((res : any) => {
-        this.dataArray = res.data.children;
-      })
-      .catch((err: any) => {
-      })
+    this.apiService.getCategoryList(url).subscribe({
+      next: (res : any) => {
+        setTimeout(() => {
+          this.dataArray = res.data.children;
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err: any) => {
+        console.error(err);
+      }
+    });
   }
 
   changeValue(event, type) {
@@ -94,13 +105,11 @@ export class SpecialityComponent implements OnInit {
     modal.componentInstance.data = data;
 
     modal.result.then((result) => {
-
       if (result) {
-        // let type = {
-        //   name: result.data.name,
-        //   _id: result.data._id
-        // }
-        this.getTypes();
+        setTimeout(() => {
+          this.getTypes();
+          this.cdr.detectChanges();
+        });
       }
     }).catch((err: any) => {
       console.log("err", err);
@@ -110,12 +119,18 @@ export class SpecialityComponent implements OnInit {
   removeType(data: any) {
     let { _id, name } = data
     if (confirm(`Are you sure you want to delete "${name}" category ? `)) {
-      firstValueFrom(this.cmsService.removeType(_id))
-        .then((res : any) => {
-          this.toaster.success(res.message);
-          this.getTypes();
-        })
-        .catch((err: any) => { });
+      this.cmsService.removeType(_id).subscribe({
+        next: (res : any) => {
+          setTimeout(() => {
+            this.toaster.success(res.message);
+            this.getTypes();
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err: any) => {
+          this.toaster.error('Failed to remove speciality');
+        }
+      });
     }
 
   }
@@ -140,9 +155,12 @@ export class SpecialityComponent implements OnInit {
         _id: data._id
       }
       this.apiService.toggleCategoryTop(body).subscribe(res => {
-        data.toggleTopLoading = false;
-        data.isTop = !data.isTop;
-        observer.next(true)
+        setTimeout(() => {
+          data.toggleTopLoading = false;
+          data.isTop = !data.isTop;
+          this.cdr.detectChanges();
+          observer.next(true)
+        });
       }, error => {
         data.toggleTopLoading = false;
         observer.next(false)
@@ -160,9 +178,12 @@ export class SpecialityComponent implements OnInit {
         _id: data._id
       }
       this.apiService.toggleCategoryFeatured(body).subscribe(res => {
-        data.toggleFeaturedLoading = false;
-        data.isFeatured = !data.isFeatured;
-        observer.next(true)
+        setTimeout(() => {
+          data.toggleFeaturedLoading = false;
+          data.isFeatured = !data.isFeatured;
+          this.cdr.detectChanges();
+          observer.next(true)
+        });
       }, error => {
         data.toggleFeaturedLoading = false;
         observer.next(false)
@@ -185,13 +206,11 @@ export class SpecialityComponent implements OnInit {
     modal.componentInstance.data = data;
 
     modal.result.then((result) => {
-
       if (result.data) {
-        // let type = {
-        //   name: result.data.name,
-        //   _id: result.data._id
-        // }
-        this.getTypes();
+        setTimeout(() => {
+          this.getTypes();
+          this.cdr.detectChanges();
+        });
       }
     }).catch((err: any) => {
       console.log("err", err);

@@ -27,8 +27,6 @@ import { RelatedProductsComponent } from './related-products/related-products.co
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -37,18 +35,14 @@ import { RelatedProductsComponent } from './related-products/related-products.co
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
-    SeasonSpecialComponent,
-    NewDateComponent,
     HbSwitchComponent,
     CKEditorModule,
     RelatedBlogsComponent,
@@ -346,7 +340,6 @@ export class AddproductComponent implements OnInit {
   }
 
   async fetchAttributes() {
-    this.apiService
       firstValueFrom(this.apiService.getAttributes(""))
       .then((res: any) => {
         if (res.data.attributes) {

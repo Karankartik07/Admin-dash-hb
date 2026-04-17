@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
@@ -28,14 +28,19 @@ export class WebinarsComponent implements OnInit {
     private corporateService: CorporateService,
     private spinner: NgxSpinnerService,
     private toastr: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((res: any) => {
-      console.log("res", res);
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getList();
+    setTimeout(() => {
+        this.route.queryParams.subscribe((res: any) => {
+          setTimeout(() => {
+              console.log("res", res);
+              this.pageSize = res.limit ? parseInt(res.limit) : 10;
+              this.page = res.page ? parseInt(res.page) : 1;
+              this.getList();
+          });
+        });
     });
   }
 
@@ -47,12 +52,15 @@ export class WebinarsComponent implements OnInit {
     this.spinner.show();
     this.corporateService.getCorporateWebinarList(params).subscribe((res: any) => {
       this.spinner.hide();
-      this.list = res.data.map(el => {
-        let { date, time } = el;
-        let [h, m] = time.split(':');
-        date = new Date(date).setHours(h, m, 0, 0);
-        el.date = date;
-        return el;
+      setTimeout(() => {
+          this.list = res.data.map(el => {
+            let { date, time } = el;
+            let [h, m] = time.split(':');
+            date = new Date(date).setHours(h, m, 0, 0);
+            el.date = date;
+            return el;
+          });
+          this.cdr.detectChanges();
       });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide();

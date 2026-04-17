@@ -25,7 +25,9 @@ export class ListComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Invoices' }, { label: 'Invoice List', active: true }];
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Invoices' }, { label: 'Invoice List', active: true }];
+    });
   }
 
   onSort({ column, direction }: SortEvent) {

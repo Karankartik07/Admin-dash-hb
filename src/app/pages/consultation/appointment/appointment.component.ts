@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, ChangeDetectorRef } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { NgbModal } from "@ng-bootstrap/ng-bootstrap";
 import { ToastrService } from "ngx-toastr";
@@ -27,24 +27,26 @@ export class AppointmentComponent implements OnInit {
     private modal: NgbModal,
     private toaster: ToastrService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.breadCrumbItems = [
-      { label: "Contacts" },
-      { label: "Appointments", active: true },
-    ];
+    setTimeout(() => {
+      this.breadCrumbItems = [
+        { label: "Contacts" },
+        { label: "Appointments", active: true },
+      ];
 
-    this.route.queryParams.subscribe((res: any) => {
-      console.log("res", res);
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getAppointment();
+      this.route.queryParams.subscribe((res: any) => {
+        setTimeout(() => {
+          console.log("res", res);
+          this.pageSize = res.limit ? parseInt(res.limit) : 10;
+          this.page = res.page ? parseInt(res.page) : 1;
+          this.getAppointment();
+        });
+      });
     });
-
-    console.log("route",this.route);
-
   }
 
   getAppointment() {
@@ -53,11 +55,19 @@ export class AppointmentComponent implements OnInit {
     let consultantUser = userRole.role.find(x=>x=="Consultant");
 
     (consultantUser?this.apiService.getConsultantAppointment(url):this.apiService.getAppointmentList(url))
-    .subscribe((res: any) => {
-      this.appointments = res.data.appointments;
-      this.total$ = res.data.noOfAppointments;
-    }),
-      (err: any) => {};
+    .subscribe({
+      next: (res: any) => {
+        setTimeout(() => {
+          this.appointments = res.data.appointments;
+          this.total$ = res.data.noOfAppointments;
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err: any) => {
+        console.error("Failed to load appointments", err);
+      }
+    });
+
   }
 
   cancelAppointment(id) {
@@ -70,12 +80,17 @@ export class AppointmentComponent implements OnInit {
         if (result == "yes") {
           this.apiService
             .cancelAppointment({ _id: id })
-            .subscribe((res: any) => {
-              this.getAppointment();
-            }),
-            (err: any) => {
-              this.toaster.error("Please try again later");
-            };
+            .subscribe({
+              next: (res: any) => {
+                setTimeout(() => {
+                  this.getAppointment();
+                  this.cdr.detectChanges();
+                });
+              },
+              error: (err: any) => {
+                this.toaster.error("Please try again later");
+              }
+            });
         }
       },
       (reason) => {
@@ -92,12 +107,17 @@ export class AppointmentComponent implements OnInit {
     modalRef.result.then(
       (result) => {
         if (result == "yes") {
-          this.apiService.removeAppointment(id).subscribe((res: any) => {
-            this.getAppointment();
-          }),
-            (err: any) => {
+          this.apiService.removeAppointment(id).subscribe({
+            next: (res: any) => {
+              setTimeout(() => {
+                this.getAppointment();
+                this.cdr.detectChanges();
+              });
+            },
+            error: (err: any) => {
               this.toaster.error("Please try again later");
-            };
+            }
+          });
         }
       },
       (reason) => {

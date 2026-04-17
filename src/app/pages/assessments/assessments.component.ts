@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
@@ -26,16 +26,20 @@ export class AssessmentsComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private toaster: ToastrService,
-    private spinner: NgxSpinnerService
+    private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((res: any) => {
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getList();
+    setTimeout(() => {
+      this.route.queryParams.subscribe((res: any) => {
+        setTimeout(() => {
+          this.pageSize = res.limit ? parseInt(res.limit) : 10;
+          this.page = res.page ? parseInt(res.page) : 1;
+          this.getList();
+        });
+      });
     });
-
   }
 
   getList() {
@@ -44,8 +48,11 @@ export class AssessmentsComponent implements OnInit {
       this.spinner.hide()
       const { data, success, total } = res
       if (success) {
-        this.list = data
-        this.count = total;
+        setTimeout(() => {
+          this.list = data
+          this.count = total;
+          this.cdr.detectChanges();
+        });
       }
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()
@@ -71,16 +78,7 @@ export class AssessmentsComponent implements OnInit {
         active: !data.active,
         _id: data._id
       }
-      // this.assessmentService.updateDoctor(body).subscribe(res => {
-      //   data.toggleActiveLoading = false;
-      //   data.active = !data.active;
-      //   observer.next(true)
-      // }, error => {
-      //   data.toggleActiveLoading = false;
-      //   observer.next(false)
-      // })
     });
-
   }
 
   changeValue() {

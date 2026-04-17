@@ -8,7 +8,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
@@ -17,13 +17,11 @@ import { TransactionService } from '../../orders/transaction.service';
 import { Transaction } from '../../orders/transaction';
 import { NgbdSortableHeader, SortEvent } from '../../sortable-directive';
 import { AddVariationComponent } from '../../modals/add-variation/add-variation.component';
-import { Observable, of, firstValueFrom } from 'rxjs';
+import { Observable, of } from 'rxjs';
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -32,17 +30,14 @@ import { Observable, of, firstValueFrom } from 'rxjs';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
-
   ],
   schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   selector: "app-variations",
@@ -64,32 +59,40 @@ export class VariationsComponent implements OnInit {
     private apiService: EcommerceService,
     private toaster: ToastrService,
     private modalService: NgbModal,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     this.transactions$ = service.transactions$;
     this.total$ = service.total$;
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [
-      { label: "Ecommerce" },
-      { label: "Variations", active: true },
-    ];
-
-    this.getVariations();
+    setTimeout(() => {
+        this.breadCrumbItems = [
+          { label: "Ecommerce" },
+          { label: "Variations", active: true },
+        ];
+        this.getVariations();
+    });
   }
 
   getVariations() {
-    firstValueFrom(this.apiService.getVariations())
-      .then((res: any) => {
-        if (res.data) {
-          this.dataArray = res.data;
-          this.total$ = of(this.dataArray.length);
+    this.apiService.getVariations().subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                if (res.data) {
+                    this.dataArray = res.data;
+                    this.total$ = of(this.dataArray.length);
+                } else {
+                    this.dataArray = [];
+                }
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error fetching variations');
         }
-      })
-      .catch((err: any) => {
-        this.toaster.error(err.error);
-      });
+    });
   }
 
   openVariationAddmodal(data='') {
@@ -111,15 +114,18 @@ export class VariationsComponent implements OnInit {
   }
 
   deleteVariation(id) {
-    firstValueFrom(this.apiService.deleteVariation(id))
-      .then((res: any) => {
-        this.toaster.success("Variation removed Successfully");
-        this.getVariations();
-        console.log("res", res);
-      })
-      .catch((err: any) => {
-        this.toaster.error(err.error.message);
-      });
+    this.apiService.deleteVariation(id).subscribe({
+        next: (res: any) => {
+            setTimeout(() => {
+                this.toaster.success("Variation removed Successfully");
+                this.getVariations();
+                this.cdr.detectChanges();
+            });
+        },
+        error: (err: any) => {
+            this.toaster.error(err.error?.message || 'Error deleting variation');
+        }
+    });
   }
 
   onSort({ column, direction }: SortEvent) {

@@ -1,5 +1,5 @@
 import { FullCalendarComponent } from '@fullcalendar/angular';
-import { Component, NgZone, OnInit, ViewChild } from "@angular/core";
+import { Component, NgZone, OnInit, ViewChild, ChangeDetectorRef } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { NgbModal } from "@ng-bootstrap/ng-bootstrap";
 import { ToastrService } from "ngx-toastr";
@@ -31,7 +31,7 @@ const FILTER_PAG_REGEX = /[^0-9]/g;
   styleUrls: ["./consultant-appointments.component.scss"] })
 export class ConsultantAppointmentsComponent implements OnInit {
 
-  @ViewChild('calendar') calendarComponent: FullCalendarComponent; 
+  @ViewChild('calendar') calendarComponent: FullCalendarComponent;
 
   breadCrumbItems = [
     { label: "Home" },
@@ -93,31 +93,39 @@ export class ConsultantAppointmentsComponent implements OnInit {
     private router: Router,
     private zone: NgZone,
     private spinner: NgxSpinnerService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.breadCrumbItems = [
-      { label: "Contacts" },
-      { label: "Appointments", active: true },
-    ];
-    this.user = this.authService.currentUser();
-    this.getProfile();
+    setTimeout(() => {
+      this.breadCrumbItems = [
+        { label: "Contacts" },
+        { label: "Appointments", active: true },
+      ];
+      this.user = this.authService.currentUser();
+      this.getProfile();
+    });
   }
 
   getProfile() {
     this.spinner.show()
     this.api.getProfile().subscribe((res: any) => {
       this.spinner.hide();
-      this.isUserVerified = res.data.activate ? 1 : 0;
+      setTimeout(() => {
+        this.isUserVerified = res.data.activate ? 1 : 0;
+        this.cdr.detectChanges();
 
-      if (this.isUserVerified) {
-        this.selectedView = this.route.snapshot.queryParams.view || this.selectedView;
-        this.route.queryParams.subscribe((res: any) => {
-          this.pageSize = res.limit ? parseInt(res.limit) : 10;
-          this.page = res.page ? parseInt(res.page) : 1;
-          this.getAppointment();
-        });
-      }
+        if (this.isUserVerified) {
+          this.selectedView = this.route.snapshot.queryParams.view || this.selectedView;
+          this.route.queryParams.subscribe((res: any) => {
+            setTimeout(() => {
+              this.pageSize = res.limit ? parseInt(res.limit) : 10;
+              this.page = res.page ? parseInt(res.page) : 1;
+              this.getAppointment();
+            });
+          });
+        }
+      });
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()
     });
@@ -131,49 +139,51 @@ export class ConsultantAppointmentsComponent implements OnInit {
     this.spinner.show();
     this.apiService
       .getAppointmentList(url)
-      // this.api.getAppointments(user._id)
       .subscribe((res: any) => {
         this.spinner.hide();
-        this.appointments = res.data.appointments;
-        this.total$ = res.data.noOfAppointments;
-        this.page = this.route.snapshot.queryParams.page || 1;
-        console.log("Calendar options 0", this.calendarOptions);
-        if (this.selectedView == 'calendar') {
-          let events = this.appointments.map((appt) => {
+        setTimeout(() => {
+          this.appointments = res.data.appointments;
+          this.total$ = res.data.noOfAppointments;
+          this.page = this.route.snapshot.queryParams.page || 1;
+          console.log("Calendar options 0", this.calendarOptions);
+          if (this.selectedView == 'calendar') {
+            let events = this.appointments.map((appt) => {
 
-            let [startTimeSlot, endTimeSlot] = appt.primaryTimeSlot.split("-").map(el => el.trim());
-            let start = new Date(appt.date);
-            start.setHours(startTimeSlot.split(':')[0], startTimeSlot.split(':')[1]);
+              let [startTimeSlot, endTimeSlot] = appt.primaryTimeSlot.split("-").map(el => el.trim());
+              let start = new Date(appt.date);
+              start.setHours(startTimeSlot.split(':')[0], startTimeSlot.split(':')[1]);
 
-            let end = new Date(appt.date);
-            end.setHours(endTimeSlot.split(':')[0], endTimeSlot.split(':')[1]);
+              let end = new Date(appt.date);
+              end.setHours(endTimeSlot.split(':')[0], endTimeSlot.split(':')[1]);
 
-            let className = '';
-            switch (appt.status) {
-              case 'Confirmed': case 'Re-scheduled': className = 'bg-success'; break;
-              case 'Payment-Awaited': className = 'bg-warning'; break;
-              case 'Completed': className = 'bg-secondary'; break;
-              case 'Cancelled': className = 'bg-danger'; break;
-              default: className = 'bg-primary';
-            }
+              let className = '';
+              switch (appt.status) {
+                case 'Confirmed': case 'Re-scheduled': className = 'bg-success'; break;
+                case 'Payment-Awaited': className = 'bg-warning'; break;
+                case 'Completed': className = 'bg-secondary'; break;
+                case 'Cancelled': className = 'bg-danger'; break;
+                default: className = 'bg-primary';
+              }
 
-            if (appt.fee && appt.paymentStatus != 'accepted' && (appt.status == 'Confirmed' || appt.status == 'Re-scheduled')) {
-              className = 'bg-warning';
-            }
+              if (appt.fee && appt.paymentStatus != 'accepted' && (appt.status == 'Confirmed' || appt.status == 'Re-scheduled')) {
+                className = 'bg-warning';
+              }
 
-            return {
-              id: appt._id,
-              title: appt.userId?.firstName || 'Hb User',
-              start: new Date(start),
-              // end: new Date(end),
-              className };
-          });
-          this.events = events;
-          let calendarApi = this.calendarComponent.getApi();
-          calendarApi.refetchEvents();
-        }
+              return {
+                id: appt._id,
+                title: appt.userId?.firstName || 'Hb User',
+                start: new Date(start),
+                // end: new Date(end),
+                className };
+            });
+            this.events = events;
+            let calendarApi = this.calendarComponent.getApi();
+            calendarApi.refetchEvents();
+          }
 
-        console.log("Caledar Options", this.calendarOptions);
+          console.log("Caledar Options", this.calendarOptions);
+          this.cdr.detectChanges();
+        });
       }),
       (err: any) => {
         this.spinner.show();
@@ -190,47 +200,9 @@ export class ConsultantAppointmentsComponent implements OnInit {
     this.getAppointment();
   }
 
-  cancelAppointment(id) {
-    // const modalRef = this.modal.open(DeleteModalComponent, { size: "lg" });
-    // modalRef.componentInstance.data = "cancelAppointment";
-    // modalRef.result.then(
-    //   (result) => {
-    //     if (result == "yes") {
-    //       this.apiService
-    //         .cancelAppointment({ _id: id })
-    //         .subscribe((res: any) => {
-    //           this.getAppointment();
-    //         }),
-    //         (err: any) => {
-    //           this.toaster.error("Please try again later");
-    //         };
-    //     }
-    //   },
-    //   (reason) => {
-    //     console.log("reason", reason);
-    //   }
-    // );
-  }
+  cancelAppointment(id) { }
 
-  removeAppointment(id) {
-    // const modalRef = this.modal.open(DeleteModalComponent, { size: "lg" });
-    // modalRef.componentInstance.data = "appointment";
-    // modalRef.result.then(
-    //   (result) => {
-    //     if (result == "yes") {
-    //       this.apiService.removeAppointment(id).subscribe((res: any) => {
-    //         this.getAppointment();
-    //       }),
-    //         (err: any) => {
-    //           this.toaster.error("Please try again later");
-    //         };
-    //     }
-    //   },
-    //   (reason) => {
-    //     console.log("reason", reason);
-    //   }
-    // );
-  }
+  removeAppointment(id) { }
 
   selectPage(page: string) {
     this.page = parseInt(page, 10) || 1;

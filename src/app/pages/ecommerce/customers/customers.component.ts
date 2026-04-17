@@ -8,7 +8,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../shared/ui/ui.module';
 import { NgbdSortableHeader, SortEvent } from '../sortable-directive';
@@ -21,7 +21,6 @@ import { Observable } from 'rxjs';
   imports: [
     CommonModule,
     AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -37,7 +36,6 @@ import { Observable } from 'rxjs';
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
   ],
@@ -58,13 +56,24 @@ export class CustomersComponent implements OnInit {
 
   @ViewChildren(NgbdSortableHeader) headers: QueryList<NgbdSortableHeader>;
 
-  constructor(public service: CustomerService) {
+  constructor(public service: CustomerService, private cdr: ChangeDetectorRef) {
     this.customers$ = service.customers$;
     this.total$ = service.total$;
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Customers', active: true }];
+    setTimeout(() => {
+        this.breadCrumbItems = [{ label: 'Ecommerce' }, { label: 'Customers', active: true }];
+        
+        // Ensure initial rendering triggers
+        this.service.customers$.subscribe(() => {
+            setTimeout(() => {
+                this.cdr.detectChanges();
+            });
+        });
+        
+        this.cdr.detectChanges();
+    });
   }
 
   onSort({column, direction}: SortEvent) {
@@ -77,5 +86,8 @@ export class CustomersComponent implements OnInit {
 
     this.service.sortColumn = (column as any);
     this.service.sortDirection = direction;
+    setTimeout(() => {
+        this.cdr.detectChanges();
+    });
   }
 }

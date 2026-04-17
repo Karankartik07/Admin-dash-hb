@@ -31,7 +31,8 @@
               "src/assets"
             ],
             "polyfills": [
-              "@angular/localize/init"
+              "@angular/localize/init",
+              "zone.js"
             ],
             "styles": [
               "node_modules/intl-tel-input/build/css/intlTelInput.css",

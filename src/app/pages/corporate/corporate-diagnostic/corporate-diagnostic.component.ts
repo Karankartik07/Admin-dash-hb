@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgxSpinnerService } from 'ngx-spinner';
@@ -39,16 +39,19 @@ export class CorporateDiagnosticComponent implements OnInit {
     private diagnostics: DiagnosticsService,
     private spinner: NgxSpinnerService,
     private toastr: ToastrService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
-    this.search$.pipe(debounceTime(500)).subscribe(this.searchProducts.bind(this))
-    this.packageId = this.route.snapshot.queryParams.package;
-    this.editId = this.route.snapshot.params.id;
+    setTimeout(() => {
+        this.search$.pipe(debounceTime(500)).subscribe(this.searchProducts.bind(this))
+        this.packageId = this.route.snapshot.queryParams.package;
+        this.editId = this.route.snapshot.params.id;
 
-    if (this.editId) {
-      this.getDiagnosticPackageDetails();
-    }
+        if (this.editId) {
+          this.getDiagnosticPackageDetails();
+        }
+    });
   }
 
   onSearchProducts(event) {
@@ -59,7 +62,10 @@ export class CorporateDiagnosticComponent implements OnInit {
     this.diagnostics.searchProducts({ keyword: val, type: ['PROFILE', 'OFFER', 'TEST'], }).subscribe(res => {
       let { success, data } = res;
       if (success) {
-        this.testList = data;
+        setTimeout(() => {
+            this.testList = data;
+            this.cdr.detectChanges();
+        });
       }
     }, (err: HttpErrorResponse) => {
 
@@ -70,12 +76,15 @@ export class CorporateDiagnosticComponent implements OnInit {
     this.diagnostics.getCorporateDiagnosticPackage(this.editId).subscribe(res => {
       let { data, success } = res;
       if (success && data) {
-        let { testId, isAvailableInCampCollection } = data;
-        this.testList = [testId];
+        setTimeout(() => {
+            let { testId, isAvailableInCampCollection } = data;
+            this.testList = [testId];
 
-        this.form.patchValue({
-          testId: testId._id,
-          isAvailableInCampCollection
+            this.form.patchValue({
+              testId: testId._id,
+              isAvailableInCampCollection
+            });
+            this.cdr.detectChanges();
         });
 
       } else {

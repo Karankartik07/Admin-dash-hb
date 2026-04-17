@@ -26,13 +26,12 @@ import { ToWords } from 'to-words';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 const FILTER_PAG_REGEX = /[^0-9]/g;
-import * as html2pdf from 'html2pdf.js';
+import html2pdf from 'html2pdf.js';
+
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -41,14 +40,12 @@ import * as html2pdf from 'html2pdf.js';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule,
     NgbdSortableHeader
@@ -66,10 +63,7 @@ import * as html2pdf from 'html2pdf.js';
 export class AwaitedOrderComponent implements OnInit {
   @ViewChild("invoiceModal") invoiceModal;
 
-  breadCrumbItems: Array<{}> = [
-    { label: "Ecommerce" },
-    { label: "Awaited", active: true },
-  ];
+  breadCrumbItems: Array<{}>;
 
   invoice: any;
 
@@ -164,12 +158,20 @@ export class AwaitedOrderComponent implements OnInit {
   }
 
   ngOnInit() {
+    setTimeout(() => {
+        this.breadCrumbItems = [
+          { label: "Ecommerce" },
+          { label: "Awaited", active: true },
+        ];
 
-    this.route.queryParams.subscribe((res: any) => {
-      console.log("res", res);
-      this.pageSize = res.limit ? parseInt(res.limit) : 10;
-      this.page = res.page ? parseInt(res.page) : 1;
-      this.getAwaitedList();
+        this.route.queryParams.subscribe((res: any) => {
+          setTimeout(() => {
+            console.log("res", res);
+            this.pageSize = res.limit ? parseInt(res.limit) : 10;
+            this.page = res.page ? parseInt(res.page) : 1;
+            this.getAwaitedList();
+          });
+        });
     });
   }
   getAwaitedList() {

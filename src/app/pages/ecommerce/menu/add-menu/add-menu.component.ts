@@ -9,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
@@ -22,8 +22,6 @@ import { trimInputValue } from '../../../../util/input.util';
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -32,14 +30,12 @@ import { trimInputValue } from '../../../../util/input.util';
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
   ],
@@ -115,19 +111,26 @@ export class AddMenuComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private lifestyle: LifestyleService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.editId = this.route.snapshot.params['id'];
-    this.breadCrumbItems = [
-      { label: 'Menu', path: '/ecommerce/menu' },
-      { label: this.editId ? 'Edit' : 'Create', active: true }
-    ];
-    this.getList();
+    setTimeout(() => {
+      this.editId = this.route.snapshot.params['id'];
+      this.breadCrumbItems = [
+        { label: 'Menu', path: '/ecommerce/menu' },
+        { label: this.editId ? 'Edit' : 'Create', active: true }
+      ];
+      this.getList();
 
-    this.form.get('module').valueChanges.subscribe((selectedModule) => {
-      this.selected_module = selectedModule;
-      this.updateNameValidator(selectedModule);
+      this.form.get('module').valueChanges.subscribe((selectedModule) => {
+        setTimeout(() => {
+          this.selected_module = selectedModule;
+          this.updateNameValidator(selectedModule);
+          this.cdr.detectChanges();
+        });
+      });
+      this.cdr.detectChanges();
     });
   }
 
@@ -145,35 +148,41 @@ export class AddMenuComponent implements OnInit {
 
   getList() {
     this.spinner.show();
-    this.api.getMenuList().subscribe(res => {
-      this.spinner.hide();
-      let links = [];
-      this.menu = JSON.parse(JSON.stringify(res.data.menus));
+    this.api.getMenuList().subscribe({
+      next: (res) => {
+        setTimeout(() => {
+          this.spinner.hide();
+          let links = [];
+          this.menu = JSON.parse(JSON.stringify(res.data.menus));
 
-      res.data.menus.forEach(el => {
-        let link = { ...el };
-        delete link.children;
-        links.push(link, ...this.getChildren(el));
-      });
+          res.data.menus.forEach(el => {
+            let link = { ...el };
+            delete link.children;
+            links.push(link, ...this.getChildren(el));
+          });
 
-      links = links.map(el => {
-        if (el.parent) {
-          let parent = links.find(link => link._id == el.parent);
-          if (parent) el.parentName = parent.name;
-        }
-        return el;
-      });
-      this.links = links;
-      if (this.editId) {
-        let editMenu = links.find(el => el._id == this.editId);
-        if (!editMenu) {
-           this.router.navigateByUrl('/ecommerce/menu');
-           return;
-        }
-        this.patchFormValue(editMenu);
+          links = links.map(el => {
+            if (el.parent) {
+              let parent = links.find(link => link._id == el.parent);
+              if (parent) el.parentName = parent.name;
+            }
+            return el;
+          });
+          this.links = links;
+          if (this.editId) {
+            let editMenu = links.find(el => el._id == this.editId);
+            if (!editMenu) {
+              this.router.navigateByUrl('/ecommerce/menu');
+              return;
+            }
+            this.patchFormValue(editMenu);
+          }
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        this.spinner.hide();
       }
-    }, err => {
-      this.spinner.hide();
     });
   }
 
@@ -265,57 +274,90 @@ export class AddMenuComponent implements OnInit {
 
   getCategoryList() {
     if (this.selected_type == 'Category' && this.selected_module == 'shop-now') {
-      firstValueFrom(this.api.getCategoryList(` ? limit=${this.pageSize}&page=${this.page}`)).then((res : any) => {
-        if (res.data.categories) {
-          this.dataArray = res.data.categories;
-          this.total = res.data.count;
+      this.api.getCategoryList(` ? limit=${this.pageSize}&page=${this.page}`).subscribe({
+        next: (res : any) => {
+          setTimeout(() => {
+            if (res.data.categories) {
+              this.dataArray = res.data.categories;
+              this.total = res.data.count;
+              this.cdr.detectChanges();
+            }
+          });
         }
       });
     } else if (this.selected_type == 'Category' && this.selected_module == 'lifestyle-tips') {
-      firstValueFrom(this.api.getCategoryListing(` ? categoryType=LifeStyle&limit=${this.pageSize}&page=${this.page}`)).then((res : any) => {
-        if (res.data) {
-          this.dataArray = res.data;
-          this.total = res.data.count;
+      this.api.getCategoryListing(` ? categoryType=LifeStyle&limit=${this.pageSize}&page=${this.page}`).subscribe({
+        next: (res : any) => {
+          setTimeout(() => {
+            if (res.data) {
+              this.dataArray = res.data;
+              this.total = res.data.count;
+              this.cdr.detectChanges();
+            }
+          });
         }
       });
     }
   }
 
   getBrandList() {
-    firstValueFrom(this.api.getBrandList(` ? limit=${this.pageSize}&page=${this.page}`)).then((res : any) => {
-      if (res.data.brands) {
-        res.data.brands.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        this.dataArray = res.data.brands;
-        this.total = res.data.count;
+    this.api.getBrandList(` ? limit=${this.pageSize}&page=${this.page}`).subscribe({
+       next: (res : any) => {
+        setTimeout(() => {
+          if (res.data.brands) {
+            res.data.brands.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+            this.dataArray = res.data.brands;
+            this.total = res.data.count;
+            this.cdr.detectChanges();
+          }
+        });
       }
     });
   }
 
   getHealthConcern() {
     this.spinner.show();
-    firstValueFrom(this.api.getHealthConcernList(` ? limit=${this.pageSize}&page=${this.page}`)).then((res : any) => {
-      this.spinner.hide();
-      if (res.data.healthConcerns) {
-        res.data.healthConcerns.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        this.dataArray = res.data.healthConcerns;
-        this.total = res.data.count;
-      }
-    }).catch(() => this.spinner.hide());
+    this.api.getHealthConcernList(` ? limit=${this.pageSize}&page=${this.page}`).subscribe({
+      next: (res : any) => {
+        setTimeout(() => {
+          this.spinner.hide();
+          if (res.data.healthConcerns) {
+            res.data.healthConcerns.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+            this.dataArray = res.data.healthConcerns;
+            this.total = res.data.count;
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => this.spinner.hide()
+    });
   }
 
   getBlogList() {
     const params = { limit: this.pageSize, page: this.page };
-    this.lifestyle.getBlogList(params).subscribe((res: any) => {
-      if (res.data) {
-        this.dataArray = res.data;
-        this.total = res.count;
+    this.lifestyle.getBlogList(params).subscribe({
+      next: (res: any) => {
+        setTimeout(() => {
+          if (res.data) {
+            this.dataArray = res.data;
+            this.total = res.count;
+            this.cdr.detectChanges();
+          }
+        });
       }
     });
   }
 
   getConsultantTypes() {
-    firstValueFrom(this.api.getTypes(`limit=${this.pageSize}&page=${this.page}`)).then((res: any) => {
-      if (res.data) this.dataArray = res.data;
+    this.api.getTypes(`limit=${this.pageSize}&page=${this.page}`).subscribe({
+      next: (res: any) => {
+        setTimeout(() => {
+          if (res.data) {
+            this.dataArray = res.data;
+            this.cdr.detectChanges();
+          }
+        });
+      }
     });
   }
 
@@ -339,13 +381,19 @@ export class AddMenuComponent implements OnInit {
     }
 
     const req = this.editId ? this.api.updateMenu({ ...this.payload, _id: this.editId }) : this.api.createMenu(this.payload);
-    req.subscribe(() => {
-      this.spinner.hide();
-      this.toastr.success(`Menu ${this.editId ? 'updated' : 'created'} successfully!`);
-      this.router.navigateByUrl('/ecommerce/menu');
-    }, () => {
-      this.spinner.hide();
-      this.toastr.error('Something went wrong!');
+    req.subscribe({
+      next: () => {
+        setTimeout(() => {
+          this.spinner.hide();
+          this.toastr.success(`Menu ${this.editId ? 'updated' : 'created'} successfully!`);
+          this.router.navigateByUrl('/ecommerce/menu');
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.spinner.hide();
+        this.toastr.error('Something went wrong!');
+      }
     });
   }
 }

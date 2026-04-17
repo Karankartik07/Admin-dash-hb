@@ -1,4 +1,4 @@
-import { Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { User } from './user';
 import { UserService } from './user.service';
@@ -41,29 +41,42 @@ export class UserlistComponent implements OnInit {
     private contactService: ContactsService,
     private modalService: NgbModal,
     private csvService: CsvService,
-    private toaster: ToastrService) {
+    private toaster: ToastrService,
+    private cdr: ChangeDetectorRef
+  ) {
   }
   
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Contacts' }, { label: 'User List', active: true }];
-    this.getUSerList();
-    this.contactService.getRoles().subscribe(data => {
-      this.roles = data.map(r => ({ name: r }));
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Contacts' }, { label: 'User List', active: true }];
+      this.getUSerList();
+      this.contactService.getRoles().subscribe(data => {
+        setTimeout(() => {
+          this.roles = data.map(r => ({ name: r }));
+          this.cdr.detectChanges();
+        });
+      });
     });
   }
 
   getUSerList() {
     if (this.search) {
       this.contactService.searchUsers(this.search, { limit: this.pageSize, page: this.page }).subscribe(res => {
-        this.users$ = res.data;
-        this.total$ = res.count;
+        setTimeout(() => {
+          this.users$ = res.data;
+          this.total$ = res.count;
+          this.cdr.detectChanges();
+        });
       });
     } else {
       let url = `limit=${this.pageSize}&page=${this.page}`;
       this.contactService.getUsersListing(url)
         .subscribe((res: any) => {
-          this.users$ = res.data;
-          this.total$ = res.count;
+          setTimeout(() => {
+            this.users$ = res.data;
+            this.total$ = res.count;
+            this.cdr.detectChanges();
+          });
         }, (err: any) => {
           this.toaster.error('Failed to load user list');
         });
@@ -78,6 +91,9 @@ export class UserlistComponent implements OnInit {
     });
     this.service.sortColumn = column;
     this.service.sortDirection = direction;
+    setTimeout(() => {
+      this.cdr.detectChanges();
+    });
   }
 
   onSearch(form: NgForm) {
@@ -98,8 +114,11 @@ export class UserlistComponent implements OnInit {
     modalRef.result.then((res) => {
       if (res) {
         this.contactService.deleteUser(id).subscribe(res => {
-          this.toaster.success('User deleted successfully');
-          this.getUSerList();
+          setTimeout(() => {
+            this.toaster.success('User deleted successfully');
+            this.getUSerList();
+            this.cdr.detectChanges();
+          });
         });
       }
     }).catch(err => {});
@@ -135,19 +154,22 @@ export class UserlistComponent implements OnInit {
 
   onDownload() {
     this.contactService.getUsersListing(`limit=10000&page=1`).subscribe((res: any) => {
-      this.usersDownload = res.data.map(el => {
-        return {
-          Name: `${el.firstName} ${el.lastName}`,
-          Email: el.email,
-          Phone: el.phone,
-          Role: (el.role || []).join(', ')
+      setTimeout(() => {
+        this.usersDownload = res.data.map(el => {
+          return {
+            Name: `${el.firstName} ${el.lastName}`,
+            Email: el.email,
+            Phone: el.phone,
+            Role: (el.role || []).join(', ')
+          }
+        });
+        try {
+          this.csvService.downloadCSV(this.usersDownload, "UserList");
+        } catch (err) {
+          console.log(err);
         }
+        this.cdr.detectChanges();
       });
-      try {
-        this.csvService.downloadCSV(this.usersDownload, "UserList");
-      } catch (err) {
-        console.log(err);
-      }
     });
   }
 }

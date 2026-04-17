@@ -1,3 +1,4 @@
+import { HbSwitchComponent } from 'src/app/shared/ui/hb-switch/hb-switch.component';
 import { CommonModule, AsyncPipe, DecimalPipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, NgModel, NgForm, FormGroup, Validators, AbstractControl, FormArray } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -8,7 +9,7 @@ import { NgOptionHighlightDirective } from '@ng-select/ng-option-highlight';
 import { DropzoneModule } from 'src/app/components/dropzone/dropzone.module';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NgxSpinnerModule, NgxSpinnerService } from 'ngx-spinner';
-import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef } from '@angular/core';
+import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA, Component, OnInit, OnDestroy, ViewChild, ViewChildren, QueryList, Input, Output, EventEmitter, ViewEncapsulation, AfterViewInit, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import { UIModule } from '../../../../shared/ui/ui.module';
 import { EcommerceService } from '../../ecommerce.service';
@@ -19,8 +20,6 @@ import { RemoveModalComponent } from '../../modals/remove/remove-modal/remove-mo
   standalone: true,
   imports: [
     CommonModule,
-    AsyncPipe,
-    DecimalPipe,
     FormsModule,
     ReactiveFormsModule,
     TranslateModule,
@@ -29,14 +28,12 @@ import { RemoveModalComponent } from '../../modals/remove/remove-modal/remove-mo
     NgbNavModule,
     NgbPaginationModule,
     NgbTooltipModule,
-    NgbHighlight,
     NgbAccordionModule,
     NgbTypeaheadModule,
     NgbCollapseModule,
     NgbDatepickerModule,
     UIModule,
     NgSelectModule,
-    NgOptionHighlightDirective,
     DropzoneModule,
     NgbModalModule
   ],
@@ -58,14 +55,17 @@ export class EnquiryListComponent implements OnInit {
     private toastr: ToastrService,
     private route: ActivatedRoute,
     private router: Router,
-    private modal: NgbModal
+    private modal: NgbModal,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((qp: any) => {
-      this.pageSize = qp.limit ? parseInt(qp.limit, 10) : 10;
-      this.page = qp.page ? parseInt(qp.page, 10) : 1;
-      this.getEnquiryList();
+      setTimeout(() => {
+        this.pageSize = qp.limit ? parseInt(qp.limit, 10) : 10;
+        this.page = qp.page ? parseInt(qp.page, 10) : 1;
+        this.getEnquiryList();
+      });
     });
   }
 
@@ -77,11 +77,17 @@ export class EnquiryListComponent implements OnInit {
         next: (res: any) => {
           this.spinner.hide();
           if (res && res.success) {
-            this.enquiries = res.data || [];
-            this.enquiriesData.count = res.pagination?.total || (res.data && res.data.length) || 0;
+            setTimeout(() => {
+              this.enquiries = res.data || [];
+              this.enquiriesData.count = res.pagination?.total || (res.data && res.data.length) || 0;
+              this.cdr.detectChanges();
+            });
           } else {
-            this.enquiries = [];
-            this.enquiriesData.count = 0;
+            setTimeout(() => {
+              this.enquiries = [];
+              this.enquiriesData.count = 0;
+              this.cdr.detectChanges();
+            });
           }
         },
         error: (err: any) => {
@@ -110,9 +116,12 @@ export class EnquiryListComponent implements OnInit {
           this.spinner.show();
           this.api.deleteEnquiryById(id).subscribe({
             next: (res: any) => {
-              this.spinner.hide();
-              this.toastr.success('Enquiry removed Successfully');
-              this.getEnquiryList();
+              setTimeout(() => {
+                this.spinner.hide();
+                this.toastr.success('Enquiry removed Successfully');
+                this.getEnquiryList();
+                this.cdr.detectChanges();
+              });
             },
             error: (err: any) => {
               this.spinner.hide();

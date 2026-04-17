@@ -1,6 +1,6 @@
 import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, OnInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
@@ -37,15 +37,16 @@ export class ConsultantSpecializationComponent implements OnInit {
     private spinner: NgxSpinnerService,
     private toaster: ToastrService,
     private modalService: NgbModal,
-    private doctorService: DoctorsService
+    private doctorService: DoctorsService,
+    private cdr: ChangeDetectorRef
   ) {
   }
 
   ngOnInit() {
-    this.breadCrumbItems = [{ label: 'Doctor' }, { label: 'Doctor Specializations', active: true }];
-
-    this.getSpecializationList();
-
+    setTimeout(() => {
+      this.breadCrumbItems = [{ label: 'Doctor' }, { label: 'Doctor Specializations', active: true }];
+      this.getSpecializationList();
+    });
   }
 
   getSpecializationList() {
@@ -54,9 +55,12 @@ export class ConsultantSpecializationComponent implements OnInit {
     this.doctorService.getSpecializationList(url).subscribe((res: any) => {
       this.spinner.hide()
       if (res.success) {
-        window.scroll(0, 0);
-        this.total = res.data.total;
-        this.dataArray = res.data.healthSpeciality;
+        setTimeout(() => {
+          window.scroll(0, 0);
+          this.total = res.data.total;
+          this.dataArray = res.data.healthSpeciality;
+          this.cdr.detectChanges();
+        });
       }
     }, (err: HttpErrorResponse) => {
       this.spinner.hide()
@@ -82,9 +86,11 @@ export class ConsultantSpecializationComponent implements OnInit {
     modal.componentInstance.data = data;
 
     modal.result.then((result) => {
-
       if (result) {
-        this.getSpecializationList();
+        setTimeout(() => {
+          this.getSpecializationList();
+          this.cdr.detectChanges();
+        });
       }
     }).catch((err: any) => {
       console.log("err", err);
@@ -93,12 +99,21 @@ export class ConsultantSpecializationComponent implements OnInit {
 
   removeSpecialization(id) {
     if (confirm('Are you sure you want to delete this specialization ? ')) {
-      firstValueFrom(this.doctorService.deleteSpecialization(id))
-        .then((res : any) => {
-          this.toaster.success(res.message);
-          this.getSpecializationList();
-        })
-        .catch((err: any) => { });
+      this.spinner.show();
+      this.doctorService.deleteSpecialization(id).subscribe({
+        next: (res : any) => {
+          setTimeout(() => {
+            this.spinner.hide();
+            this.toaster.success(res.message);
+            this.getSpecializationList();
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err: any) => {
+           this.spinner.hide();
+           this.toaster.error('Failed to delete specialization');
+        }
+      });
     }
   }
 
@@ -123,9 +138,11 @@ export class ConsultantSpecializationComponent implements OnInit {
     modal.componentInstance.data = data;
 
     modal.result.then((result) => {
-
       if (result.data) {
-        this.getSpecializationList();
+        setTimeout(() => {
+          this.getSpecializationList();
+          this.cdr.detectChanges();
+        });
       }
     }).catch((err: any) => {
       console.log("err", err);
